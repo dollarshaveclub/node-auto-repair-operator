@@ -71,6 +71,7 @@ func TestNodeEventCreateAndWalk(t *testing.T) {
 	assert.NoError(t, err)
 
 	event := &nodes.NodeEvent{
+		ID:        "fdsa",
 		NodeID:    "asdf",
 		CreatedAt: time.Now(),
 	}
@@ -81,7 +82,6 @@ func TestNodeEventCreateAndWalk(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.True(t, event.ID > 0)
 	})
 
 	t.Run("walk", func(t *testing.T) {

@@ -171,18 +171,12 @@ func (n *Store) CreateNodeEventTX(tx *bolt.Tx, event *nodes.NodeEvent) error {
 		return errors.Wrapf(err, "error validating node event")
 	}
 
-	eventsBucket := tx.Bucket(eventsBucketName)
-	id, err := eventsBucket.NextSequence()
-	if err != nil {
-		return errors.Wrapf(err, "error generating node event ID")
-	}
-	event.ID = id
-
 	buf, err := json.Marshal(event)
 	if err != nil {
 		return errors.Wrapf(err, "error encoding node event")
 	}
 
+	eventsBucket := tx.Bucket(eventsBucketName)
 	eventBucket, err := eventsBucket.CreateBucketIfNotExists(nodeEventBucket(event.NodeID))
 	if err != nil {
 		return errors.Wrapf(err, "error creating node events bucket")
