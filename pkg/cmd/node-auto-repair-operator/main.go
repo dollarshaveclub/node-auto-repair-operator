@@ -67,6 +67,8 @@ func main() {
 		Use:   "node-auto-repair-operator",
 		Short: "node-auto-repair-operator repairs faulty nodes in a Kubernetes cluster",
 		Run: func(cmd *cobra.Command, args []string) {
+			logrus.Infof("using database at %s", viper.GetString("db"))
+
 			db, err := bolt.Open(viper.GetString("db"), 0600, nil)
 			if err != nil {
 				logrus.Fatal(err)

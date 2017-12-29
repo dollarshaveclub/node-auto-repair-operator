@@ -27,6 +27,9 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: NARO_DB
+              value: /data/naro.db
           resources:
 {{ toYaml .Values.resources | indent 12 }}
           volumeMounts:
