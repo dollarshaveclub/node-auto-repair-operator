@@ -1,4 +1,4 @@
-.PHONY: build
+.PHONY: build test docker-image
 
 default: build
 
@@ -7,3 +7,6 @@ build:
 
 test:
 	go test github.com/dollarshaveclub/node-auto-repair-operator/pkg/...
+
+docker-image:
+	docker build -t quay.io/dollarshaveclub/node-auto-repair-operator:master .
