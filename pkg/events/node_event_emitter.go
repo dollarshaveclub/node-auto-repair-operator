@@ -58,7 +58,7 @@ func (n *KubeNodeEventEmitter) handleEvent(obj interface{}) {
 		return
 	}
 	if event.InvolvedObject.Kind != nodeEventKind {
-		logrus.Debugf("KubeNodeEventEmitter: received non-node event of kind: %s", event.Kind)
+		logrus.Debugf("KubeNodeEventEmitter: received non-node event")
 		return
 	}
 
