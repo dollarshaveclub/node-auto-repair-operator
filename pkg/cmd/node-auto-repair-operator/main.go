@@ -9,6 +9,7 @@ import (
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	v1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -56,16 +57,17 @@ func k8sClient() (kubernetes.Interface, error) {
 }
 
 func main() {
-	var dbfile string
-
 	// TODO: make this configurable
 	logrus.SetLevel(logrus.DebugLevel)
+
+	viper.SetEnvPrefix("naro")
+	viper.AutomaticEnv()
 
 	rootCmd := &cobra.Command{
 		Use:   "node-auto-repair-operator",
 		Short: "node-auto-repair-operator repairs faulty nodes in a Kubernetes cluster",
 		Run: func(cmd *cobra.Command, args []string) {
-			db, err := bolt.Open(dbfile, 0600, nil)
+			db, err := bolt.Open(viper.GetString("db"), 0600, nil)
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -97,7 +99,8 @@ func main() {
 			<-c
 		},
 	}
-	rootCmd.Flags().StringVarP(&dbfile, "db", "d", "/tmp/node-auto-repair-operator.db", "the path to the embedded database")
+	rootCmd.Flags().String("db", "/tmp/node-auto-repair-operator.db", "the path to the embedded database")
+	viper.BindPFlag("db", rootCmd.Flags().Lookup("db"))
 
 	rootCmd.Execute()
 }
