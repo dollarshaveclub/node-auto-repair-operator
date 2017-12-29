@@ -8,6 +8,7 @@ import (
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/events"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	v1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -55,35 +56,48 @@ func k8sClient() (kubernetes.Interface, error) {
 }
 
 func main() {
+	var dbfile string
+
 	// TODO: make this configurable
 	logrus.SetLevel(logrus.DebugLevel)
 
-	db, err := bolt.Open("/tmp/node-auto-repair-operator.db", 0600, nil)
-	if err != nil {
-		logrus.Fatal(err)
+	rootCmd := &cobra.Command{
+		Use:   "node-auto-repair-operator",
+		Short: "node-auto-repair-operator repairs faulty nodes in a Kubernetes cluster",
+		Run: func(cmd *cobra.Command, args []string) {
+			db, err := bolt.Open(dbfile, 0600, nil)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			s, err := store.NewStore(db)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			k8s, err := k8sClient()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			pollInterval := time.Second * 5
+
+			eventInformer := v1informers.NewEventInformer(k8s,
+				"default",
+				pollInterval,
+				cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+
+			eventController := events.NewKubeNodeEventController(db, k8s.CoreV1().Nodes(), s)
+
+			eventEmitter := events.NewKubeNodeEventEmitter(eventInformer, pollInterval)
+			eventEmitter.AddHandler(eventController)
+			eventEmitter.Start()
+
+			// Block forever
+			var c chan struct{}
+			<-c
+		},
 	}
-	s, err := store.NewStore(db)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	rootCmd.Flags().StringVarP(&dbfile, "db", "d", "/tmp/node-auto-repair-operator.db", "the path to the embedded database")
 
-	k8s, err := k8sClient()
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	pollInterval := time.Second * 5
-
-	eventInformer := v1informers.NewEventInformer(k8s,
-		"default",
-		pollInterval,
-		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
-
-	eventController := events.NewKubeNodeEventController(db, k8s.CoreV1().Nodes(), s)
-
-	eventEmitter := events.NewKubeNodeEventEmitter(eventInformer, pollInterval)
-	eventEmitter.AddHandler(eventController)
-	eventEmitter.Start()
-
-	time.Sleep(time.Hour)
+	rootCmd.Execute()
 }
