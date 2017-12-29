@@ -51,3 +51,12 @@ func (n *Node) Validate() error {
 	}
 	return nil
 }
+
+// A NodeTimePeriodSummary contains all node metadata for a Node
+// within a time period.
+type NodeTimePeriodSummary struct {
+	Node        *Node
+	Events      []*NodeEvent
+	PeriodStart time.Time
+	PeriodEnd   time.Time
+}
