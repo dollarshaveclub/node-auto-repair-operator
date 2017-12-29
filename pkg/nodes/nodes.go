@@ -14,6 +14,7 @@ type Node struct {
 	ID        string
 	Name      string
 	CreatedAt time.Time
+	Source    *v1.Node
 }
 
 // String is the printable version of a Node.
@@ -28,6 +29,7 @@ func NewNodeFromKubeNode(node *v1.Node) *Node {
 		ID:        node.Status.NodeInfo.MachineID,
 		Name:      node.ObjectMeta.Name,
 		CreatedAt: node.ObjectMeta.CreationTimestamp.Time,
+		Source:    node,
 	}
 }
 

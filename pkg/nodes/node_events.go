@@ -19,6 +19,7 @@ type NodeEvent struct {
 	Reason          string
 	Type            string
 	SourceComponent string
+	Source          *v1.Event
 }
 
 // String is the printable version of a NodeEvent.
@@ -38,6 +39,7 @@ func NewNodeEventFromKubeEvent(node *Node, event *v1.Event) *NodeEvent {
 		Reason:          event.Reason,
 		Type:            event.Type,
 		SourceComponent: event.Source.Component,
+		Source:          event,
 	}
 }
 
