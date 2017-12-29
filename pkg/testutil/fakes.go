@@ -26,6 +26,9 @@ func FakeKubeNode(t *testing.T) *v1.Node {
 // FakeKubeNodeEvent returns a fake *v1.Event.
 func FakeKubeNodeEvent(t *testing.T) *v1.Event {
 	return &v1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: "uid",
+		},
 		LastTimestamp: metav1.NewTime(time.Now()),
 	}
 }
