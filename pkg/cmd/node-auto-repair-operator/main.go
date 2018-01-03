@@ -1,11 +1,15 @@
 package main
 
 import (
+	"os"
 	"time"
+
+	"encoding/json"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/bbolt"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/events"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -101,8 +105,51 @@ func main() {
 			<-c
 		},
 	}
-	rootCmd.Flags().String("db", "/tmp/node-auto-repair-operator.db", "the path to the embedded database")
-	viper.BindPFlag("db", rootCmd.Flags().Lookup("db"))
+	rootCmd.PersistentFlags().String("db", "/tmp/node-auto-repair-operator.db", "the path to the embedded database")
+	viper.BindPFlag("db", rootCmd.PersistentFlags().Lookup("db"))
+
+	exportDBCmd := &cobra.Command{
+		Use:   "export-db",
+		Short: "exports the database as a JSON file",
+		Run: func(cmd *cobra.Command, args []string) {
+			logrus.Infof("using database at %s", viper.GetString("db"))
+			logrus.Infof("exporting database to %s", viper.GetString("file"))
+
+			db, err := bolt.Open(viper.GetString("db"), 0600, nil)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			s, err := store.NewStore(db)
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			var export struct {
+				NodeTimePeriodSummaries []*nodes.NodeTimePeriodSummary
+			}
+
+			export.NodeTimePeriodSummaries, err = s.GetNodeTimePeriodSummaries(time.Now().Add(-365*24*time.Hour), time.Now())
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			file, err := os.Create(viper.GetString("file"))
+			if err != nil {
+				logrus.Fatal(err)
+			}
+			defer file.Close()
+
+			enc := json.NewEncoder(file)
+			enc.SetIndent("", "    ")
+
+			if err := enc.Encode(export); err != nil {
+				logrus.Fatal(err)
+			}
+		},
+	}
+	exportDBCmd.Flags().String("file", "/tmp/node-auto-repair-operator-export.json", "where to export the database to")
+	viper.BindPFlag("file", exportDBCmd.Flags().Lookup("file"))
+	rootCmd.AddCommand(exportDBCmd)
 
 	rootCmd.Execute()
 }
