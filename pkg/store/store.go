@@ -1,8 +1,10 @@
 package store
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	bolt "github.com/coreos/bbolt"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
@@ -121,6 +123,66 @@ func (n *Store) GetNodeTX(tx *bolt.Tx, nodeID string) (*nodes.Node, error) {
 	}
 
 	return &node, nil
+}
+
+// GetNodeTimePeriodSummaries returns NodeTimePeriodSummary for all
+// nodes between a time period.
+func (n *Store) GetNodeTimePeriodSummaries(start, end time.Time) ([]*nodes.NodeTimePeriodSummary, error) {
+	var summaries []*nodes.NodeTimePeriodSummary
+	if err := n.db.View(func(tx *bolt.Tx) error {
+		s, err := n.GetNodeTimePeriodSummariesTX(tx, start, end)
+		if err != nil {
+			return errors.Wrapf(err, "error fetching NodeTimePeriodSummaries in TX")
+		}
+		summaries = s
+		return nil
+	}); err != nil {
+		return nil, errors.Wrapf(err, "error opening transaction")
+	}
+
+	return summaries, nil
+}
+
+// GetNodeTimePeriodSummariesTX returns NodeTimePeriodSummary for all
+// nodes between a time period.
+func (n *Store) GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) ([]*nodes.NodeTimePeriodSummary, error) {
+	var summaries []*nodes.NodeTimePeriodSummary
+	nodeBucket := tx.Bucket(nodeBucketName)
+	cursor := nodeBucket.Cursor()
+
+	for k, nodeJSON := cursor.First(); k != nil; k, nodeJSON = cursor.Next() {
+		var node nodes.Node
+		if err := json.Unmarshal(nodeJSON, &node); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshaling Node")
+		}
+
+		summary := &nodes.NodeTimePeriodSummary{
+			Node:        &node,
+			PeriodStart: start,
+			PeriodEnd:   end,
+		}
+
+		eventsBucket := tx.Bucket(eventsBucketName)
+		eventBucket := eventsBucket.Bucket(nodeEventBucket(node.ID))
+
+		startKey := (&nodes.NodeEvent{CreatedAt: start}).Key()
+		endKey := (&nodes.NodeEvent{CreatedAt: end}).Key()
+
+		eventCursor := eventBucket.Cursor()
+		for eventKey, eventJSON := eventCursor.Seek(startKey); eventKey != nil &&
+			bytes.Compare(eventKey, endKey) <= 0; eventKey, eventJSON = eventCursor.Next() {
+			var event nodes.NodeEvent
+			if err := json.Unmarshal(eventJSON, &event); err != nil {
+				return nil, errors.Wrapf(err, "error unmarshaling NodeEvent")
+			}
+
+			summary.Events = append(summary.Events, &event)
+		}
+
+		summaries = append(summaries, summary)
+	}
+
+	return summaries, nil
 }
 
 // DeleteNode deletes a node.

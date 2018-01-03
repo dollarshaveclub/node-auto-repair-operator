@@ -71,7 +71,12 @@ func TestNodeEventCreateAndWalk(t *testing.T) {
 	assert.NoError(t, err)
 
 	event := &nodes.NodeEvent{
-		ID:        "fdsa",
+		ID:        "fdsa-1",
+		NodeID:    "asdf",
+		CreatedAt: time.Now(),
+	}
+	event2 := &nodes.NodeEvent{
+		ID:        "fdsa-2",
 		NodeID:    "asdf",
 		CreatedAt: time.Now(),
 	}
@@ -79,6 +84,11 @@ func TestNodeEventCreateAndWalk(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
 		err := db.Update(func(tx *bolt.Tx) error {
 			assert.NoError(t, store.CreateNodeEventTX(tx, event))
+			return nil
+		})
+		assert.NoError(t, err)
+		err = db.Update(func(tx *bolt.Tx) error {
+			assert.NoError(t, store.CreateNodeEventTX(tx, event2))
 			return nil
 		})
 		assert.NoError(t, err)
@@ -95,6 +105,75 @@ func TestNodeEventCreateAndWalk(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, 1, len(events), "%v", events)
+		assert.Equal(t, 2, len(events), "%v", events)
+	})
+}
+
+func TestGetNodeTimePeriodSummaries(t *testing.T) {
+	db, cleaner := testutil.DB(t)
+	defer cleaner()
+
+	store, err := store.NewStore(db)
+	assert.NoError(t, err)
+
+	node := &nodes.Node{
+		ID:        "asdf",
+		Name:      "A Sdf",
+		CreatedAt: time.Now(),
+	}
+	assert.NoError(t, store.CreateNode(node))
+
+	startTime := time.Now()
+	endTime := time.Now().Add(time.Hour)
+
+	oldEvent := &nodes.NodeEvent{
+		ID:        "1",
+		NodeID:    node.ID,
+		CreatedAt: startTime.Add(-time.Hour),
+	}
+	assert.NoError(t, store.CreateNodeEvent(oldEvent))
+
+	currentEvent := &nodes.NodeEvent{
+		ID:        "2",
+		NodeID:    node.ID,
+		CreatedAt: startTime.Add(time.Minute),
+	}
+	assert.NoError(t, store.CreateNodeEvent(currentEvent))
+
+	futureEvent := &nodes.NodeEvent{
+		ID:        "3",
+		NodeID:    node.ID,
+		CreatedAt: startTime.Add(time.Hour),
+	}
+	assert.NoError(t, store.CreateNodeEvent(futureEvent))
+
+	t.Run("middle-event", func(t *testing.T) {
+		summaries, err := store.GetNodeTimePeriodSummaries(startTime, endTime)
+		assert.NoError(t, err)
+
+		if assert.Len(t, summaries, 1) {
+			summary := summaries[0]
+			assert.Equal(t, startTime, summary.PeriodStart)
+			assert.Equal(t, endTime, summary.PeriodEnd)
+			assert.Equal(t, node.ID, summary.Node.ID)
+
+			if assert.Len(t, summary.Events, 1) {
+				event := summary.Events[0]
+				assert.Equal(t, event.ID, currentEvent.ID)
+			}
+		}
+	})
+
+	t.Run("all-events", func(t *testing.T) {
+		summaries, err := store.GetNodeTimePeriodSummaries(startTime.Add(-time.Hour), endTime.Add(time.Hour))
+		assert.NoError(t, err)
+
+		if assert.Len(t, summaries, 1) {
+			summary := summaries[0]
+			assert.Equal(t, startTime.Add(-time.Hour), summary.PeriodStart)
+			assert.Equal(t, endTime.Add(time.Hour), summary.PeriodEnd)
+			assert.Equal(t, node.ID, summary.Node.ID)
+			assert.Len(t, summary.Events, 3)
+		}
 	})
 }
