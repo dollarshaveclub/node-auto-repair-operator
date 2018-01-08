@@ -17,7 +17,7 @@ func FakeKubeNode(t *testing.T) *v1.Node {
 		},
 		Status: v1.NodeStatus{
 			NodeInfo: v1.NodeSystemInfo{
-				MachineID: "minikube",
+				SystemUUID: "minikube",
 			},
 		},
 	}

@@ -4,6 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/api/core/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	bolt "github.com/coreos/bbolt"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
@@ -22,6 +26,11 @@ func TestNodeCRUD(t *testing.T) {
 		ID:        "asdf",
 		Name:      "A Sdf",
 		CreatedAt: time.Now(),
+		Source: &v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "asdf",
+			},
+		},
 	}
 
 	t.Run("create", func(t *testing.T) {
