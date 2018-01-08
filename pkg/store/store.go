@@ -178,8 +178,9 @@ func (n *Store) GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) 
 
 			summary.Events = append(summary.Events, &event)
 		}
-
-		summaries = append(summaries, summary)
+		if len(summary.Events) > 0 {
+			summaries = append(summaries, summary)
+		}
 	}
 
 	return summaries, nil
