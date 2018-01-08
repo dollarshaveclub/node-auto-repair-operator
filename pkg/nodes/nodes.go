@@ -26,7 +26,9 @@ func (n *Node) String() string {
 // metadata.
 func NewNodeFromKubeNode(node *v1.Node) *Node {
 	return &Node{
-		ID:        node.Status.NodeInfo.MachineID,
+		// We can't use MachineID because it isn't unique
+		// between instances that share an AMI.
+		ID:        node.Status.NodeInfo.SystemUUID,
 		Name:      node.ObjectMeta.Name,
 		CreatedAt: node.ObjectMeta.CreationTimestamp.Time,
 		Source:    node,

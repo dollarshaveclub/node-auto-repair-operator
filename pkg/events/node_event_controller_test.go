@@ -29,7 +29,7 @@ func TestKubeNodeEventControllerHandleKubeNodeEvent(t *testing.T) {
 	event := testutil.FakeKubeNodeEvent(t)
 
 	if assert.NoError(t, controller.HandleKubeNodeEvent(event)) {
-		n, err := store.GetNode(node.Status.NodeInfo.MachineID)
+		n, err := store.GetNode(node.Status.NodeInfo.SystemUUID)
 		assert.NoError(t, err)
 		assert.NotNil(t, n)
 
@@ -38,7 +38,7 @@ func TestKubeNodeEventControllerHandleKubeNodeEvent(t *testing.T) {
 			events = append(events, e)
 			return nil
 		}
-		assert.NoError(t, store.WalkNodeEvents(node.Status.NodeInfo.MachineID, eventHandler))
+		assert.NoError(t, store.WalkNodeEvents(node.Status.NodeInfo.SystemUUID, eventHandler))
 		assert.Len(t, events, 1)
 	}
 }
