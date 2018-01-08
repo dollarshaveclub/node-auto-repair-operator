@@ -10,3 +10,6 @@ test:
 
 docker-image:
 	docker build -t quay.io/dollarshaveclub/node-auto-repair-operator:master .
+
+push-docker-image:
+	docker push quay.io/dollarshaveclub/node-auto-repair-operator:master
