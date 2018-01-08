@@ -21,6 +21,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var (
+	// GitSHA is set by a build argument.
+	GitSHA string
+)
+
 // k8sConfig parses a local kubeconfig file. If it doesn't exist, the
 // function assumes that it's running in a Kubernetes cluster, so it
 // attempts to parse the service account configuration.
@@ -71,6 +76,8 @@ func main() {
 		Use:   "node-auto-repair-operator",
 		Short: "node-auto-repair-operator repairs faulty nodes in a Kubernetes cluster",
 		Run: func(cmd *cobra.Command, args []string) {
+			logrus.Infof("starting node-auto-repair-operator")
+			logrus.Infof("build ref: %s", GitSHA)
 			logrus.Infof("using database at %s", viper.GetString("db"))
 
 			db, err := bolt.Open(viper.GetString("db"), 0600, nil)
