@@ -1,23 +1,27 @@
-package events
+package naro
 
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/bbolt"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// KubeNodeEventHandler is an interface for a type that can ingest a
+// node event.
+type KubeNodeEventHandler interface {
+	HandleKubeNodeEvent(*corev1.Event) error
+}
+
 // KubeNodeEventController is a type that watches for Kubernetes
 // events. When an event is detected, the event is persisted with a
-// store.Store.
+// Store.
 type KubeNodeEventController struct {
 	db         *bolt.DB
 	nodeClient v1.NodeInterface
-	store      *store.Store
+	store      Store
 }
 
 // String is the string representation of a controller.
@@ -27,7 +31,7 @@ func (k *KubeNodeEventController) String() string {
 
 // NewKubeNodeEventController creates a new KubeNodeEventController.
 func NewKubeNodeEventController(db *bolt.DB, nodeClient v1.NodeInterface,
-	store *store.Store) *KubeNodeEventController {
+	store Store) *KubeNodeEventController {
 	return &KubeNodeEventController{
 		db:         db,
 		nodeClient: nodeClient,
@@ -46,12 +50,12 @@ func (k *KubeNodeEventController) HandleKubeNodeEvent(e *corev1.Event) error {
 
 	if err := k.db.Update(func(tx *bolt.Tx) error {
 		// Create/update node
-		node := nodes.NewNodeFromKubeNode(kubeNode)
+		node := NewNodeFromKubeNode(kubeNode)
 		if err := k.store.CreateNodeTX(tx, node); err != nil {
 			return errors.Wrapf(err, "error creating Node")
 		}
 
-		event := nodes.NewNodeEventFromKubeEvent(node, e)
+		event := NewNodeEventFromKubeEvent(node, e)
 		if err := k.store.CreateNodeEventTX(tx, event); err != nil {
 			return errors.Wrapf(err, "error creating NodeEvent")
 		}

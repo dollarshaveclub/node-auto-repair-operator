@@ -1,4 +1,4 @@
-package events_test
+package kubernetes_test
 
 import (
 	"testing"
@@ -8,14 +8,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/events"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil/mocks"
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 )
 
 func TestNodeEventEmitterHandleEvent(t *testing.T) {
-	nodeEventHandler := &events.MockKubeNodeEventHandler{}
-	informer := &events.MockSharedIndexInformerStub{}
+	nodeEventHandler := &mocks.KubeNodeEventHandler{}
+	informer := &mocks.SharedIndexInformerStub{}
 	defer mock.AssertExpectationsForObjects(t, nodeEventHandler, informer)
 
 	event := &v1.Event{
@@ -37,7 +38,7 @@ func TestNodeEventEmitterHandleEvent(t *testing.T) {
 	}).Return()
 	informer.On("Run", mock.Anything).Return()
 
-	emitter := events.NewKubeNodeEventEmitter(informer, time.Minute)
+	emitter := kubernetes.NewKubeNodeEventEmitter(informer, time.Minute)
 	emitter.AddHandler(nodeEventHandler)
 	emitter.Start()
 

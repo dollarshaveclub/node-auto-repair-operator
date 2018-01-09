@@ -1,28 +1,28 @@
-package store_test
+package boltdb_test
 
 import (
 	"testing"
 	"time"
 
+	bolt "github.com/coreos/bbolt"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil"
+	"github.com/stretchr/testify/assert"
+
 	"k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	bolt "github.com/coreos/bbolt"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNodeCRUD(t *testing.T) {
 	db, cleaner := testutil.DB(t)
 	defer cleaner()
 
-	store, err := store.NewStore(db)
+	store, err := boltdb.NewStore(db)
 	assert.NoError(t, err)
 
-	node := &nodes.Node{
+	node := &naro.Node{
 		ID:        "asdf",
 		Name:      "A Sdf",
 		CreatedAt: time.Now(),
@@ -76,15 +76,15 @@ func TestNodeEventCreateAndWalk(t *testing.T) {
 	db, cleaner := testutil.DB(t)
 	defer cleaner()
 
-	store, err := store.NewStore(db)
+	store, err := boltdb.NewStore(db)
 	assert.NoError(t, err)
 
-	event := &nodes.NodeEvent{
+	event := &naro.NodeEvent{
 		ID:        "fdsa-1",
 		NodeID:    "asdf",
 		CreatedAt: time.Now(),
 	}
-	event2 := &nodes.NodeEvent{
+	event2 := &naro.NodeEvent{
 		ID:        "fdsa-2",
 		NodeID:    "asdf",
 		CreatedAt: time.Now(),
@@ -104,9 +104,9 @@ func TestNodeEventCreateAndWalk(t *testing.T) {
 	})
 
 	t.Run("walk", func(t *testing.T) {
-		var events []*nodes.NodeEvent
+		var events []*naro.NodeEvent
 		err := db.Update(func(tx *bolt.Tx) error {
-			err := store.WalkNodeEventsTX(tx, event.NodeID, func(e *nodes.NodeEvent) error {
+			err := store.WalkNodeEventsTX(tx, event.NodeID, func(e *naro.NodeEvent) error {
 				events = append(events, e)
 				return nil
 			})
@@ -122,10 +122,10 @@ func TestGetNodeTimePeriodSummaries(t *testing.T) {
 	db, cleaner := testutil.DB(t)
 	defer cleaner()
 
-	store, err := store.NewStore(db)
+	store, err := boltdb.NewStore(db)
 	assert.NoError(t, err)
 
-	node := &nodes.Node{
+	node := &naro.Node{
 		ID:        "asdf",
 		Name:      "A Sdf",
 		CreatedAt: time.Now(),
@@ -135,21 +135,21 @@ func TestGetNodeTimePeriodSummaries(t *testing.T) {
 	startTime := time.Now()
 	endTime := time.Now().Add(time.Hour)
 
-	oldEvent := &nodes.NodeEvent{
+	oldEvent := &naro.NodeEvent{
 		ID:        "1",
 		NodeID:    node.ID,
 		CreatedAt: startTime.Add(-time.Hour),
 	}
 	assert.NoError(t, store.CreateNodeEvent(oldEvent))
 
-	currentEvent := &nodes.NodeEvent{
+	currentEvent := &naro.NodeEvent{
 		ID:        "2",
 		NodeID:    node.ID,
 		CreatedAt: startTime.Add(time.Minute),
 	}
 	assert.NoError(t, store.CreateNodeEvent(currentEvent))
 
-	futureEvent := &nodes.NodeEvent{
+	futureEvent := &naro.NodeEvent{
 		ID:        "3",
 		NodeID:    node.ID,
 		CreatedAt: startTime.Add(time.Hour),

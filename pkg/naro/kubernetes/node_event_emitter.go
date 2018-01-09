@@ -1,9 +1,10 @@
-package events
+package kubernetes
 
 import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -13,17 +14,11 @@ const (
 	nodeEventKind = "Node"
 )
 
-// KubeNodeEventHandler is an interface for a type that can ingest a
-// node event.
-type KubeNodeEventHandler interface {
-	HandleKubeNodeEvent(*v1.Event) error
-}
-
 // KubeNodeEventEmitter emits Kubernetes node events to handlers.
 type KubeNodeEventEmitter struct {
 	informer cache.SharedIndexInformer
 	stopChan chan struct{}
-	handlers []KubeNodeEventHandler
+	handlers []naro.KubeNodeEventHandler
 }
 
 // NewKubeNodeEventEmitter instantiates a new KubeNodeEventEmitter.
@@ -46,7 +41,7 @@ func (n *KubeNodeEventEmitter) Start() {
 }
 
 // AddHandler subscribes a handler to node events.
-func (n *KubeNodeEventEmitter) AddHandler(h KubeNodeEventHandler) {
+func (n *KubeNodeEventEmitter) AddHandler(h naro.KubeNodeEventHandler) {
 	n.handlers = append(n.handlers, h)
 }
 

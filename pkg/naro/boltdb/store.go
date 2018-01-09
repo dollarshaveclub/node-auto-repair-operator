@@ -1,4 +1,4 @@
-package store
+package boltdb
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	bolt "github.com/coreos/bbolt"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/pkg/errors"
 )
 
@@ -53,7 +53,7 @@ func (n *Store) initializeBuckets() error {
 
 // CreateNode persists a Node. This method is used for creates and
 // updates.
-func (n *Store) CreateNode(node *nodes.Node) error {
+func (n *Store) CreateNode(node *naro.Node) error {
 	if err := n.db.Update(func(tx *bolt.Tx) error {
 		if err := n.CreateNodeTX(tx, node); err != nil {
 			return errors.Wrapf(err, "error creating node")
@@ -68,7 +68,7 @@ func (n *Store) CreateNode(node *nodes.Node) error {
 
 // CreateNodeTX persists a Node. This method is used for creates and
 // updates.
-func (n *Store) CreateNodeTX(tx *bolt.Tx, node *nodes.Node) error {
+func (n *Store) CreateNodeTX(tx *bolt.Tx, node *naro.Node) error {
 	if err := node.Validate(); err != nil {
 		return errors.Wrapf(err, "error validating node")
 	}
@@ -88,8 +88,8 @@ func (n *Store) CreateNodeTX(tx *bolt.Tx, node *nodes.Node) error {
 
 // GetNode fetches a node by its ID. `nil` is returned if the node
 // isn't found.
-func (n *Store) GetNode(nodeID string) (*nodes.Node, error) {
-	var node *nodes.Node
+func (n *Store) GetNode(nodeID string) (*naro.Node, error) {
+	var node *naro.Node
 	if err := n.db.View(func(tx *bolt.Tx) error {
 		n, err := n.GetNodeTX(tx, nodeID)
 		if err != nil {
@@ -106,18 +106,18 @@ func (n *Store) GetNode(nodeID string) (*nodes.Node, error) {
 
 // GetNodeTX fetches a node by its ID. `nil` is returned if the node
 // isn't found.
-func (n *Store) GetNodeTX(tx *bolt.Tx, nodeID string) (*nodes.Node, error) {
+func (n *Store) GetNodeTX(tx *bolt.Tx, nodeID string) (*naro.Node, error) {
 	if nodeID == "" {
 		return nil, errors.New("error: invalid ID provided")
 	}
 
 	nodeBucket := tx.Bucket(nodeBucketName)
-	buf := nodeBucket.Get(nodes.NodeKey(nodeID))
+	buf := nodeBucket.Get(naro.NodeKey(nodeID))
 	if buf == nil {
 		return nil, nil
 	}
 
-	var node nodes.Node
+	var node naro.Node
 	if err := json.Unmarshal(buf, &node); err != nil {
 		return nil, errors.Wrapf(err, "error unmarshaling into node buffer")
 	}
@@ -127,8 +127,8 @@ func (n *Store) GetNodeTX(tx *bolt.Tx, nodeID string) (*nodes.Node, error) {
 
 // GetNodeTimePeriodSummaries returns NodeTimePeriodSummary for all
 // nodes between a time period.
-func (n *Store) GetNodeTimePeriodSummaries(start, end time.Time) ([]*nodes.NodeTimePeriodSummary, error) {
-	var summaries []*nodes.NodeTimePeriodSummary
+func (n *Store) GetNodeTimePeriodSummaries(start, end time.Time) ([]*naro.NodeTimePeriodSummary, error) {
+	var summaries []*naro.NodeTimePeriodSummary
 	if err := n.db.View(func(tx *bolt.Tx) error {
 		s, err := n.GetNodeTimePeriodSummariesTX(tx, start, end)
 		if err != nil {
@@ -145,18 +145,18 @@ func (n *Store) GetNodeTimePeriodSummaries(start, end time.Time) ([]*nodes.NodeT
 
 // GetNodeTimePeriodSummariesTX returns NodeTimePeriodSummary for all
 // nodes between a time period.
-func (n *Store) GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) ([]*nodes.NodeTimePeriodSummary, error) {
-	var summaries []*nodes.NodeTimePeriodSummary
+func (n *Store) GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) ([]*naro.NodeTimePeriodSummary, error) {
+	var summaries []*naro.NodeTimePeriodSummary
 	nodeBucket := tx.Bucket(nodeBucketName)
 	cursor := nodeBucket.Cursor()
 
 	for k, nodeJSON := cursor.First(); k != nil; k, nodeJSON = cursor.Next() {
-		var node nodes.Node
+		var node naro.Node
 		if err := json.Unmarshal(nodeJSON, &node); err != nil {
 			return nil, errors.Wrapf(err, "error unmarshaling Node")
 		}
 
-		summary := &nodes.NodeTimePeriodSummary{
+		summary := &naro.NodeTimePeriodSummary{
 			Node:        &node,
 			PeriodStart: start,
 			PeriodEnd:   end,
@@ -165,13 +165,13 @@ func (n *Store) GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) 
 		eventsBucket := tx.Bucket(eventsBucketName)
 		eventBucket := eventsBucket.Bucket(nodeEventBucket(node.ID))
 
-		startKey := (&nodes.NodeEvent{CreatedAt: start}).Key()
-		endKey := (&nodes.NodeEvent{CreatedAt: end}).Key()
+		startKey := (&naro.NodeEvent{CreatedAt: start}).Key()
+		endKey := (&naro.NodeEvent{CreatedAt: end}).Key()
 
 		eventCursor := eventBucket.Cursor()
 		for eventKey, eventJSON := eventCursor.Seek(startKey); eventKey != nil &&
 			bytes.Compare(eventKey, endKey) <= 0; eventKey, eventJSON = eventCursor.Next() {
-			var event nodes.NodeEvent
+			var event naro.NodeEvent
 			if err := json.Unmarshal(eventJSON, &event); err != nil {
 				return nil, errors.Wrapf(err, "error unmarshaling NodeEvent")
 			}
@@ -187,7 +187,7 @@ func (n *Store) GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) 
 }
 
 // DeleteNode deletes a node.
-func (n *Store) DeleteNode(node *nodes.Node) error {
+func (n *Store) DeleteNode(node *naro.Node) error {
 	if err := n.db.Update(func(tx *bolt.Tx) error {
 		if err := n.DeleteNodeTX(tx, node); err != nil {
 			return errors.Wrapf(err, "error deleting node")
@@ -201,7 +201,7 @@ func (n *Store) DeleteNode(node *nodes.Node) error {
 }
 
 // DeleteNodeTX deletes a node.
-func (n *Store) DeleteNodeTX(tx *bolt.Tx, node *nodes.Node) error {
+func (n *Store) DeleteNodeTX(tx *bolt.Tx, node *naro.Node) error {
 	if err := node.Validate(); err != nil {
 		return errors.Wrapf(err, "error validating node")
 	}
@@ -215,7 +215,7 @@ func (n *Store) DeleteNodeTX(tx *bolt.Tx, node *nodes.Node) error {
 }
 
 // CreateNodeEvent persists a NodeEvent.
-func (n *Store) CreateNodeEvent(event *nodes.NodeEvent) error {
+func (n *Store) CreateNodeEvent(event *naro.NodeEvent) error {
 	if err := n.db.Update(func(tx *bolt.Tx) error {
 		if err := n.CreateNodeEventTX(tx, event); err != nil {
 			return errors.Wrapf(err, "error creating node event")
@@ -229,7 +229,7 @@ func (n *Store) CreateNodeEvent(event *nodes.NodeEvent) error {
 }
 
 // CreateNodeEventTX persists a NodeEvent.
-func (n *Store) CreateNodeEventTX(tx *bolt.Tx, event *nodes.NodeEvent) error {
+func (n *Store) CreateNodeEventTX(tx *bolt.Tx, event *naro.NodeEvent) error {
 	if err := event.Validate(); err != nil {
 		return errors.Wrapf(err, "error validating node event")
 	}
@@ -253,7 +253,7 @@ func (n *Store) CreateNodeEventTX(tx *bolt.Tx, event *nodes.NodeEvent) error {
 
 // WalkNodeEvents walks through all events for a Node, calling a
 // handler for each individual event.
-func (n *Store) WalkNodeEvents(nodeID string, handler func(*nodes.NodeEvent) error) error {
+func (n *Store) WalkNodeEvents(nodeID string, handler func(*naro.NodeEvent) error) error {
 	if err := n.db.View(func(tx *bolt.Tx) error {
 		if err := n.WalkNodeEventsTX(tx, nodeID, handler); err != nil {
 			return errors.Wrapf(err, "error walking through node events")
@@ -268,7 +268,7 @@ func (n *Store) WalkNodeEvents(nodeID string, handler func(*nodes.NodeEvent) err
 
 // WalkNodeEventsTX walks through all events for a Node, calling a
 // handler for each individual event.
-func (n *Store) WalkNodeEventsTX(tx *bolt.Tx, nodeID string, handler func(*nodes.NodeEvent) error) error {
+func (n *Store) WalkNodeEventsTX(tx *bolt.Tx, nodeID string, handler func(*naro.NodeEvent) error) error {
 	// If the event bucket doesn't exist, then no events have been
 	// created.
 	eventsBucket := tx.Bucket(eventsBucketName)
@@ -278,7 +278,7 @@ func (n *Store) WalkNodeEventsTX(tx *bolt.Tx, nodeID string, handler func(*nodes
 	}
 
 	if err := eventBucket.ForEach(func(_ []byte, v []byte) error {
-		var event nodes.NodeEvent
+		var event naro.NodeEvent
 		if err := json.Unmarshal(v, &event); err != nil {
 			return errors.Wrapf(err, "error unmarshaling node event")
 		}

@@ -1,13 +1,12 @@
-package events_test
+package naro_test
 
 import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/events"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/testutil"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil"
 	"github.com/stretchr/testify/assert"
 
 	"k8s.io/client-go/kubernetes/fake"
@@ -17,14 +16,14 @@ func TestKubeNodeEventControllerHandleKubeNodeEvent(t *testing.T) {
 	db, cleaner := testutil.DB(t)
 	defer cleaner()
 
-	store, err := store.NewStore(db)
+	store, err := boltdb.NewStore(db)
 	assert.NoError(t, err)
 
 	node := testutil.FakeKubeNode(t)
 	kubeClient := fake.NewSimpleClientset(node)
 	nodeClient := kubeClient.CoreV1().Nodes()
 
-	controller := events.NewKubeNodeEventController(db, nodeClient, store)
+	controller := naro.NewKubeNodeEventController(db, nodeClient, store)
 
 	event := testutil.FakeKubeNodeEvent(t)
 
@@ -33,8 +32,8 @@ func TestKubeNodeEventControllerHandleKubeNodeEvent(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, n)
 
-		var events []*nodes.NodeEvent
-		eventHandler := func(e *nodes.NodeEvent) error {
+		var events []*naro.NodeEvent
+		eventHandler := func(e *naro.NodeEvent) error {
 			events = append(events, e)
 			return nil
 		}
