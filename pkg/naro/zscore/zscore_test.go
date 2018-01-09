@@ -3,21 +3,21 @@ package zscore_test
 import (
 	"testing"
 
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/anomaly/zscore"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/zscore"
 	"github.com/stretchr/testify/assert"
 )
 
 type DummyExtractor struct{}
 
-func (d *DummyExtractor) Extract(s *nodes.NodeTimePeriodSummary) (float64, error) {
+func (d *DummyExtractor) Extract(s *naro.NodeTimePeriodSummary) (float64, error) {
 	return float64(len(s.Events)), nil
 }
 
 func TestDetector(t *testing.T) {
 	detector := zscore.NewDetector(zscore.ZScore95, &DummyExtractor{})
 	done := make(chan struct{})
-	summaries := make(chan *nodes.NodeTimePeriodSummary)
+	summaries := make(chan *naro.NodeTimePeriodSummary)
 
 	go func() {
 		assert.NoError(t, detector.Train(summaries, done))
@@ -26,11 +26,11 @@ func TestDetector(t *testing.T) {
 	// Push a lot of two event node summaries so that when we test
 	// with a 2+ event summary, an anomaly is detected.
 	for i := 0; i < 100; i++ {
-		summaries <- &nodes.NodeTimePeriodSummary{
-			Node: &nodes.Node{},
-			Events: []*nodes.NodeEvent{
-				&nodes.NodeEvent{},
-				&nodes.NodeEvent{},
+		summaries <- &naro.NodeTimePeriodSummary{
+			Node: &naro.Node{},
+			Events: []*naro.NodeEvent{
+				&naro.NodeEvent{},
+				&naro.NodeEvent{},
 			},
 		}
 	}
@@ -42,13 +42,13 @@ func TestDetector(t *testing.T) {
 
 	t.Run("anomaly", func(t *testing.T) {
 		// This is an anomaly since it has more than two events.
-		anomaly := &nodes.NodeTimePeriodSummary{
-			Node: &nodes.Node{},
-			Events: []*nodes.NodeEvent{
-				&nodes.NodeEvent{},
-				&nodes.NodeEvent{},
-				&nodes.NodeEvent{},
-				&nodes.NodeEvent{},
+		anomaly := &naro.NodeTimePeriodSummary{
+			Node: &naro.Node{},
+			Events: []*naro.NodeEvent{
+				&naro.NodeEvent{},
+				&naro.NodeEvent{},
+				&naro.NodeEvent{},
+				&naro.NodeEvent{},
 			},
 		}
 		isAnomaly, err := detector.IsAnomaly(anomaly)
@@ -60,11 +60,11 @@ func TestDetector(t *testing.T) {
 	t.Run("non-anomaly", func(t *testing.T) {
 		// This is not an anomaly since it has exactly two events,
 		// which is the same number as the training set.
-		nonAnomaly := &nodes.NodeTimePeriodSummary{
-			Node: &nodes.Node{},
-			Events: []*nodes.NodeEvent{
-				&nodes.NodeEvent{},
-				&nodes.NodeEvent{},
+		nonAnomaly := &naro.NodeTimePeriodSummary{
+			Node: &naro.Node{},
+			Events: []*naro.NodeEvent{
+				&naro.NodeEvent{},
+				&naro.NodeEvent{},
 			},
 		}
 		isAnomaly, err := detector.IsAnomaly(nonAnomaly)

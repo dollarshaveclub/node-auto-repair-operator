@@ -6,11 +6,12 @@ import (
 
 	"encoding/json"
 
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
+	narokube "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/bbolt"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/events"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/store"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -84,7 +85,7 @@ func main() {
 			if err != nil {
 				logrus.Fatal(err)
 			}
-			s, err := store.NewStore(db)
+			s, err := boltdb.NewStore(db)
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -101,9 +102,9 @@ func main() {
 				pollInterval,
 				cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
-			eventController := events.NewKubeNodeEventController(db, k8s.CoreV1().Nodes(), s)
+			eventController := naro.NewKubeNodeEventController(db, k8s.CoreV1().Nodes(), s)
 
-			eventEmitter := events.NewKubeNodeEventEmitter(eventInformer, pollInterval)
+			eventEmitter := narokube.NewKubeNodeEventEmitter(eventInformer, pollInterval)
 			eventEmitter.AddHandler(eventController)
 			eventEmitter.Start()
 
@@ -126,13 +127,13 @@ func main() {
 			if err != nil {
 				logrus.Fatal(err)
 			}
-			s, err := store.NewStore(db)
+			s, err := boltdb.NewStore(db)
 			if err != nil {
 				logrus.Fatal(err)
 			}
 
 			var export struct {
-				NodeTimePeriodSummaries []*nodes.NodeTimePeriodSummary
+				NodeTimePeriodSummaries []*naro.NodeTimePeriodSummary
 			}
 
 			export.NodeTimePeriodSummaries, err = s.GetNodeTimePeriodSummaries(time.Now().Add(-365*24*time.Hour), time.Now())

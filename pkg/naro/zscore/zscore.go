@@ -3,7 +3,7 @@ package zscore
 import (
 	"fmt"
 
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/nodes"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/montanaflynn/stats"
 	"github.com/pkg/errors"
 )
@@ -15,12 +15,12 @@ const (
 )
 
 // A FeatureExtractor extracts a single float64 feature from a
-// nodes.NodeTimePeriodSummary.
+// naro.NodeTimePeriodSummary.
 type FeatureExtractor interface {
-	Extract(*nodes.NodeTimePeriodSummary) (float64, error)
+	Extract(*naro.NodeTimePeriodSummary) (float64, error)
 }
 
-// Detector can run z-tests on nodes.NodeTimePeriodSummary
+// Detector can run z-tests on naro.NodeTimePeriodSummary
 // instances. More information:
 // http://colingorrie.github.io/outlier-detection.html
 type Detector struct {
@@ -44,8 +44,8 @@ func NewDetector(zthreshold float64, extractor FeatureExtractor) *Detector {
 }
 
 // Train prepares the Detector for testing new
-// nodes.NodeTimePeriodSummary instances.
-func (d *Detector) Train(summaries <-chan *nodes.NodeTimePeriodSummary, done chan<- struct{}) error {
+// naro.NodeTimePeriodSummary instances.
+func (d *Detector) Train(summaries <-chan *naro.NodeTimePeriodSummary, done chan<- struct{}) error {
 	var features []float64
 
 	// TODO: process these in a stream, taking advantage of the
@@ -54,7 +54,7 @@ func (d *Detector) Train(summaries <-chan *nodes.NodeTimePeriodSummary, done cha
 	for ns := range summaries {
 		feature, err := d.extractor.Extract(ns)
 		if err != nil {
-			return errors.Wrapf(err, "error extracting feature from nodes.NodeTimePeriodSummary")
+			return errors.Wrapf(err, "error extracting feature from naro.NodeTimePeriodSummary")
 		}
 		features = append(features, feature)
 	}
@@ -76,12 +76,12 @@ func (d *Detector) Train(summaries <-chan *nodes.NodeTimePeriodSummary, done cha
 	return nil
 }
 
-// IsAnomaly returns true if the nodes.NodeTimePeriodSummary is
+// IsAnomaly returns true if the naro.NodeTimePeriodSummary is
 // anomalous.
-func (d *Detector) IsAnomaly(ns *nodes.NodeTimePeriodSummary) (bool, error) {
+func (d *Detector) IsAnomaly(ns *naro.NodeTimePeriodSummary) (bool, error) {
 	feature, err := d.extractor.Extract(ns)
 	if err != nil {
-		return false, errors.Wrapf(err, "error extracting feature from nodes.NodeTimePeriodSummary")
+		return false, errors.Wrapf(err, "error extracting feature from naro.NodeTimePeriodSummary")
 	}
 
 	zscore := (feature - d.mean) / d.stddev
