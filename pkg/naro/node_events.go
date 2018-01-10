@@ -46,7 +46,7 @@ func NewNodeEventFromKubeEvent(node *Node, event *v1.Event) *NodeEvent {
 // Key is the boltdb key for this event. This key is sort-able by time
 // since it's prefixed with an RFC 3339 timestamp.
 func (n *NodeEvent) Key() []byte {
-	k := fmt.Sprintf("event:%s:%s", n.CreatedAt.Format(time.RFC3339), n.ID)
+	k := fmt.Sprintf("event:%s:%s", n.CreatedAt.UTC().Format(time.RFC3339), n.ID)
 	return []byte(k)
 }
 

@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"encoding/json"
@@ -108,9 +110,16 @@ func main() {
 			eventEmitter.AddHandler(eventController)
 			eventEmitter.Start()
 
-			// Block forever
-			var c chan struct{}
-			<-c
+			sigchan := make(chan os.Signal)
+			signal.Notify(sigchan, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
+
+			select {
+			case <-sigchan:
+				logrus.Info("exiting")
+				if err := db.Close(); err != nil {
+					logrus.Fatal(err)
+				}
+			}
 		},
 	}
 	rootCmd.PersistentFlags().String("db", "/tmp/node-auto-repair-operator.db", "the path to the embedded database")
