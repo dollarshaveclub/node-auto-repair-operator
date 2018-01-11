@@ -60,7 +60,7 @@ func (k *KubeNodeEventController) HandleKubeNodeEvent(e *corev1.Event) error {
 			return errors.Wrapf(err, "error creating NodeEvent")
 		}
 
-		logrus.Infof("processed event %s for node %s", event, node)
+		logrus.Infof("KubeNodeEventController: processed event %s for node %s", event, node)
 
 		return nil
 	}); err != nil {

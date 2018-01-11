@@ -17,6 +17,7 @@ const (
 // A FeatureExtractor extracts a single float64 feature from a
 // naro.NodeTimePeriodSummary.
 type FeatureExtractor interface {
+	String() string
 	Extract(*naro.NodeTimePeriodSummary) (float64, error)
 }
 
@@ -32,7 +33,8 @@ type Detector struct {
 
 // String returns the string representation of a Detector.
 func (d *Detector) String() string {
-	return fmt.Sprintf("zscore.Detector: mean(%f), stddev(%f)", d.mean, d.stddev)
+	return fmt.Sprintf("zscore.Detector: mean(%f), stddev(%f), extractor(%s)",
+		d.mean, d.stddev, d.extractor)
 }
 
 // NewDetector creates a new Detector instance.
@@ -72,9 +74,9 @@ func (d *Detector) Train(summaries []*naro.NodeTimePeriodSummary) error {
 	return nil
 }
 
-// IsAnomaly returns true if the naro.NodeTimePeriodSummary is
+// IsAnomalous returns true if the naro.NodeTimePeriodSummary is
 // anomalous.
-func (d *Detector) IsAnomaly(ns *naro.NodeTimePeriodSummary) (bool, error) {
+func (d *Detector) IsAnomalous(ns *naro.NodeTimePeriodSummary) (bool, error) {
 	feature, err := d.extractor.Extract(ns)
 	if err != nil {
 		return false, errors.Wrapf(err, "error extracting feature from naro.NodeTimePeriodSummary")

@@ -1,6 +1,9 @@
 package extractors
 
-import "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+import (
+	"github.com/Sirupsen/logrus"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+)
 
 // DockerDaemonInstability is a zscore.FeatureExtractor that tries to
 // highlight Docker daemon instability on a Kubernetes node by
@@ -13,9 +16,18 @@ func NewDockerDaemonInstability() *DockerDaemonInstability {
 	return &DockerDaemonInstability{}
 }
 
+// String returns the string representation of
+// DockerDaemonInstability.
+func (f *DockerDaemonInstability) String() string {
+	return "DockerDaemonInstability"
+}
+
 // Extract returns the number of times Docker daemon instability is
 // detected within the naro.NodeTimePeriodSummary.
 func (f *DockerDaemonInstability) Extract(ns *naro.NodeTimePeriodSummary) (float64, error) {
+	logrus.Debugf("DockerDaemonInstability: extracting feature from %d naro.NodeEvents",
+		len(ns.Events))
+
 	instabilityPeriods := 0
 	unstable := false
 

@@ -6,11 +6,15 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/clock"
+
 	"encoding/json"
 
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
 	narokube "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/zscore"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/zscore/extractors"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/bbolt"
@@ -113,16 +117,28 @@ func main() {
 			sigchan := make(chan os.Signal)
 			signal.Notify(sigchan, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 
+			zscoreDetectorFactory := func() (naro.AnomalyDetector, error) {
+				extractor := extractors.NewDockerDaemonInstability()
+				return zscore.NewDetector(zscore.ZScore99, extractor), nil
+			}
+
+			detectorController := naro.NewDetectorController(24*time.Hour, time.Hour,
+				10*time.Second, []naro.AnomalyDetectorFactory{zscoreDetectorFactory}, s,
+				clock.NewClock(), nil)
+			detectorController.Start()
+
 			select {
 			case <-sigchan:
 				logrus.Info("exiting")
+				eventEmitter.Stop()
+				detectorController.Stop()
 				if err := db.Close(); err != nil {
 					logrus.Fatal(err)
 				}
 			}
 		},
 	}
-	rootCmd.PersistentFlags().String("db", "/tmp/node-auto-repair-operator.db", "the path to the embedded database")
+	rootCmd.PersistentFlags().String("db", "/tmp/naro.db", "the path to the embedded database")
 	viper.BindPFlag("db", rootCmd.PersistentFlags().Lookup("db"))
 
 	exportDBCmd := &cobra.Command{
