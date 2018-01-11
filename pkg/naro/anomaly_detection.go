@@ -13,7 +13,7 @@ import (
 type AnomalyDetector interface {
 	String() string
 	Train(summaries []*NodeTimePeriodSummary) error
-	IsAnomalous(ns *NodeTimePeriodSummary) (bool, error)
+	IsAnomalous(ns *NodeTimePeriodSummary) (bool, string, error)
 }
 
 // AnomalyDetectorFactory is a function that can create new
@@ -127,13 +127,13 @@ func (d *DetectorController) Run() error {
 		for _, nodeSummary := range summaries {
 			logrus.Debugf("DetectorController: attempting to detect anomaly in %s with %s", nodeSummary.Node, detector)
 
-			isAnomalous, err := detector.IsAnomalous(nodeSummary)
+			isAnomalous, meta, err := detector.IsAnomalous(nodeSummary)
 			if err != nil {
 				logrus.WithError(err).Errorf("error detecting anomaly in NodeTimePeriodSummary")
 				continue
 			}
 			if isAnomalous {
-				logrus.Infof("DetectorController: detected anomaly in %s with %s", nodeSummary.Node, detector)
+				logrus.Infof("DetectorController: detected anomaly in %s with %s: %s", nodeSummary.Node, detector, meta)
 
 				for _, handler := range d.handlers {
 					if err := handler.HandleAnomaly(nodeSummary); err != nil {

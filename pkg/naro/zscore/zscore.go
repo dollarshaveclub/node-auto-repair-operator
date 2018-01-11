@@ -3,6 +3,7 @@ package zscore
 import (
 	"fmt"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/montanaflynn/stats"
 	"github.com/pkg/errors"
@@ -33,8 +34,8 @@ type Detector struct {
 
 // String returns the string representation of a Detector.
 func (d *Detector) String() string {
-	return fmt.Sprintf("zscore.Detector: mean(%f), stddev(%f), extractor(%s)",
-		d.mean, d.stddev, d.extractor)
+	return fmt.Sprintf("Detector: mean(%f), stddev(%f), z-threshold(%f), extractor(%s)",
+		d.mean, d.stddev, d.zthreshold, d.extractor)
 }
 
 // NewDetector creates a new Detector instance.
@@ -59,10 +60,13 @@ func (d *Detector) Train(summaries []*naro.NodeTimePeriodSummary) error {
 		features = append(features, feature)
 	}
 
+	logrus.Debugf("Detector: features: %v", features)
+
 	mean, err := stats.Mean(features)
 	if err != nil {
 		return errors.Wrapf(err, "error calculating mean")
 	}
+
 	stddev, err := stats.StandardDeviation(features)
 	if err != nil {
 		return errors.Wrapf(err, "error calculating standard deviation")
@@ -76,13 +80,13 @@ func (d *Detector) Train(summaries []*naro.NodeTimePeriodSummary) error {
 
 // IsAnomalous returns true if the naro.NodeTimePeriodSummary is
 // anomalous.
-func (d *Detector) IsAnomalous(ns *naro.NodeTimePeriodSummary) (bool, error) {
+func (d *Detector) IsAnomalous(ns *naro.NodeTimePeriodSummary) (bool, string, error) {
 	feature, err := d.extractor.Extract(ns)
 	if err != nil {
-		return false, errors.Wrapf(err, "error extracting feature from naro.NodeTimePeriodSummary")
+		return false, "", errors.Wrapf(err, "error extracting feature from naro.NodeTimePeriodSummary")
 	}
 
 	zscore := (feature - d.mean) / d.stddev
 
-	return zscore >= d.zthreshold, nil
+	return zscore >= d.zthreshold, fmt.Sprintf("z-score: %f", zscore), nil
 }

@@ -122,7 +122,7 @@ func main() {
 				return zscore.NewDetector(zscore.ZScore99, extractor), nil
 			}
 
-			detectorController := naro.NewDetectorController(24*time.Hour, time.Hour,
+			detectorController := naro.NewDetectorController(24*time.Hour, 24*time.Hour,
 				10*time.Second, []naro.AnomalyDetectorFactory{zscoreDetectorFactory}, s,
 				clock.NewClock(), nil)
 			detectorController.Start()
