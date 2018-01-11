@@ -32,7 +32,7 @@ type Detector struct {
 
 // String returns the string representation of a Detector.
 func (d *Detector) String() string {
-	return fmt.Sprintf("Detector: mean(%f), stddev(%f)", d.mean, d.stddev)
+	return fmt.Sprintf("zscore.Detector: mean(%f), stddev(%f)", d.mean, d.stddev)
 }
 
 // NewDetector creates a new Detector instance.
@@ -45,13 +45,11 @@ func NewDetector(zthreshold float64, extractor FeatureExtractor) *Detector {
 
 // Train prepares the Detector for testing new
 // naro.NodeTimePeriodSummary instances.
-func (d *Detector) Train(summaries <-chan *naro.NodeTimePeriodSummary, done chan<- struct{}) error {
+func (d *Detector) Train(summaries []*naro.NodeTimePeriodSummary) error {
 	var features []float64
 
-	// TODO: process these in a stream, taking advantage of the
-	// input channel. This involves calculating means & stddevs
-	// manually.
-	for ns := range summaries {
+	// TODO: process these in a stream.
+	for _, ns := range summaries {
 		feature, err := d.extractor.Extract(ns)
 		if err != nil {
 			return errors.Wrapf(err, "error extracting feature from naro.NodeTimePeriodSummary")
@@ -70,8 +68,6 @@ func (d *Detector) Train(summaries <-chan *naro.NodeTimePeriodSummary, done chan
 
 	d.mean = mean
 	d.stddev = stddev
-
-	done <- struct{}{}
 
 	return nil
 }

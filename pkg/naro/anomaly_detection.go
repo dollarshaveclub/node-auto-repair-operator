@@ -1,8 +1,127 @@
 package naro
 
+import (
+	"time"
+
+	"code.cloudfoundry.org/clock"
+	"github.com/Sirupsen/logrus"
+	"github.com/pkg/errors"
+)
+
 // AnomalyDetector is a type that can be trained to detect issues
 // within new NodeTimePeriodSummaries.
 type AnomalyDetector interface {
-	Train(summaries <-chan *NodeTimePeriodSummary, done chan<- struct{}) error
-	IsAnomaly(ns *NodeTimePeriodSummary) (bool, error)
+	String() string
+	Train(summaries []*NodeTimePeriodSummary) error
+	IsAnomaly(ns *NodeTimePeriodSummary) (bool, string, error)
+}
+
+// AnomalyDetectorFactory is a function that can create new
+// AnomalyDetectors.
+type AnomalyDetectorFactory func() (AnomalyDetector, error)
+
+// AnomalyHandler is a type that can respond to anomalies. This is
+// where node repairs are wired in.
+type AnomalyHandler interface {
+	HandleAnomaly(*NodeTimePeriodSummary, string) error
+}
+
+// DetectorController runs a set of AnomalyDetectors periodically,
+// informing handlers of when an anomaly is detected.
+type DetectorController struct {
+	factories           []AnomalyDetectorFactory
+	trainingTimePeriod  time.Duration
+	detectionTimePeriod time.Duration
+	runInterval         time.Duration
+	store               Store
+	clock               clock.Clock
+	handlers            []AnomalyHandler
+}
+
+// NewDetectorController returns a new DetectorController.
+func NewDetectorController(trainingTimePeriod, detectionTimePeriod,
+	runInterval time.Duration, factories []AnomalyDetectorFactory,
+	store Store, clock clock.Clock, handlers []AnomalyHandler) *DetectorController {
+	return &DetectorController{
+		factories:           factories,
+		trainingTimePeriod:  trainingTimePeriod,
+		detectionTimePeriod: detectionTimePeriod,
+		runInterval:         runInterval,
+		store:               store,
+		clock:               clock,
+		handlers:            handlers,
+	}
+}
+
+func (d *DetectorController) getDetectors() ([]AnomalyDetector, error) {
+	var detectors []AnomalyDetector
+	for _, factory := range d.factories {
+		detector, err := factory()
+		if err != nil {
+			return nil, errors.Wrapf(err, "error creating AnomalyDetector with factory")
+		}
+		detectors = append(detectors, detector)
+	}
+
+	currentTime := d.clock.Now()
+	trainingStart := currentTime.Add(-d.trainingTimePeriod)
+
+	summaries, err := d.store.GetNodeTimePeriodSummaries(currentTime, trainingStart)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error fetching NodeTimePeriodSummaries for training")
+	}
+
+	for _, detector := range detectors {
+		logrus.Debugf("training anomaly detector: %s", detector)
+		if err := detector.Train(summaries); err != nil {
+			return nil, errors.Wrapf(err, "error training detector")
+		}
+	}
+
+	return detectors, nil
+}
+
+// Run performs anomaly detection, informing handlers of any
+// anomalies. The set of detectors is trained prior to running any
+// detection algorithms.
+func (d *DetectorController) Run() error {
+	detectors, err := d.getDetectors()
+	if err != nil {
+		return errors.Wrapf(err, "error creating detectors")
+	}
+
+	currentTime := d.clock.Now()
+	detectionStart := currentTime.Add(-d.detectionTimePeriod)
+
+	summaries, err := d.store.GetNodeTimePeriodSummaries(currentTime, detectionStart)
+	if err != nil {
+		return errors.Wrapf(err, "error fetching NodeTimePeriodSummaries for detection")
+	}
+
+	for _, detector := range detectors {
+		for _, nodeSummary := range summaries {
+			logrus.Debugf("attempting to detect anomaly in %s with %s", nodeSummary.Node, detector)
+
+			isAnomaly, description, err := detector.IsAnomaly(nodeSummary)
+			if err != nil {
+				logrus.WithError(err).Errorf("error detecting anomaly in NodeTimePeriodSummary")
+				continue
+			}
+			if isAnomaly {
+				logrus.Infof("detected anomaly in %s with %s: %s", nodeSummary.Node,
+					detector, description)
+
+				for _, handler := range d.handlers {
+					if err := handler.HandleAnomaly(nodeSummary, description); err != nil {
+						logrus.WithError(err).
+							Errorf("error handling anomalous NodeTimePeriodSummary")
+						continue
+					}
+				}
+
+			}
+		}
+	}
+
+	return nil
 }
