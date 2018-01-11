@@ -1,6 +1,7 @@
 package naro
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -88,20 +89,23 @@ func (d *DetectorController) getDetectors() ([]AnomalyDetector, error) {
 
 // Start begins starts the controller's run loop.
 func (d *DetectorController) Start() {
-	ticker := d.clock.NewTicker(d.runInterval)
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
 		for {
 			select {
-			case <-ticker.C():
-				logrus.Infof("DetectorController: starting run loop")
-				if err := d.Run(); err != nil {
-					logrus.WithError(err).Errorf("error running DetectorController")
-				}
 			case <-d.stopChan:
 				return
+			default:
 			}
+
+			logrus.Debugf("DetectorController: starting run loop")
+			if err := d.run(); err != nil {
+				logrus.WithError(err).Errorf("error running DetectorController")
+			}
+
+			logrus.Debugf("DetectorController: finished run loop, sleeping for %s", d.runInterval)
+			d.clock.Sleep(d.runInterval)
 		}
 	}()
 }
@@ -112,10 +116,10 @@ func (d *DetectorController) Stop() {
 	d.wg.Wait()
 }
 
-// Run performs anomaly detection, informing handlers of any
+// run performs anomaly detection, informing handlers of any
 // anomalies. The set of detectors is trained prior to running any
 // detection algorithms.
-func (d *DetectorController) Run() error {
+func (d *DetectorController) run() error {
 	detectors, err := d.getDetectors()
 	if err != nil {
 		return errors.Wrapf(err, "error creating detectors")
@@ -128,6 +132,8 @@ func (d *DetectorController) Run() error {
 	if err != nil {
 		return errors.Wrapf(err, "error fetching NodeTimePeriodSummaries for detection")
 	}
+
+	fmt.Println(summaries)
 
 	for _, detector := range detectors {
 		for _, nodeSummary := range summaries {

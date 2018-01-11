@@ -29,3 +29,17 @@ func (_m *FeatureExtractor) Extract(_a0 *naro.NodeTimePeriodSummary) (float64, e
 
 	return r0, r1
 }
+
+// String provides a mock function with given fields:
+func (_m *FeatureExtractor) String() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}

@@ -166,7 +166,7 @@ func (n *Store) GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) 
 		eventBucket := eventsBucket.Bucket(nodeEventBucket(node.ID))
 
 		startKey := (&naro.NodeEvent{CreatedAt: start}).Key()
-		endKey := (&naro.NodeEvent{CreatedAt: end}).Key()
+		endKey := (&naro.NodeEvent{CreatedAt: end.Add(time.Second)}).Key()
 
 		eventCursor := eventBucket.Cursor()
 		for eventKey, eventJSON := eventCursor.Seek(startKey); eventKey != nil &&
