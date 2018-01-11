@@ -10,33 +10,31 @@ import (
 
 type DummyExtractor struct{}
 
+func (d *DummyExtractor) String() string {
+	return "DummyExtractor"
+}
+
 func (d *DummyExtractor) Extract(s *naro.NodeTimePeriodSummary) (float64, error) {
 	return float64(len(s.Events)), nil
 }
 
 func TestDetector(t *testing.T) {
 	detector := zscore.NewDetector(zscore.ZScore95, &DummyExtractor{})
-	done := make(chan struct{})
-	summaries := make(chan *naro.NodeTimePeriodSummary)
-
-	go func() {
-		assert.NoError(t, detector.Train(summaries, done))
-	}()
+	var summaries []*naro.NodeTimePeriodSummary
 
 	// Push a lot of two event node summaries so that when we test
 	// with a 2+ event summary, an anomaly is detected.
 	for i := 0; i < 100; i++ {
-		summaries <- &naro.NodeTimePeriodSummary{
+		summaries = append(summaries, &naro.NodeTimePeriodSummary{
 			Node: &naro.Node{},
 			Events: []*naro.NodeEvent{
 				&naro.NodeEvent{},
 				&naro.NodeEvent{},
 			},
-		}
+		})
 	}
 
-	close(summaries)
-	<-done
+	assert.NoError(t, detector.Train(summaries))
 
 	t.Log(detector)
 
@@ -51,7 +49,7 @@ func TestDetector(t *testing.T) {
 				&naro.NodeEvent{},
 			},
 		}
-		isAnomaly, err := detector.IsAnomaly(anomaly)
+		isAnomaly, _, err := detector.IsAnomalous(anomaly)
 		if assert.NoError(t, err) {
 			assert.True(t, isAnomaly)
 		}
@@ -67,7 +65,7 @@ func TestDetector(t *testing.T) {
 				&naro.NodeEvent{},
 			},
 		}
-		isAnomaly, err := detector.IsAnomaly(nonAnomaly)
+		isAnomaly, _, err := detector.IsAnomalous(nonAnomaly)
 		if assert.NoError(t, err) {
 			assert.False(t, isAnomaly)
 		}
