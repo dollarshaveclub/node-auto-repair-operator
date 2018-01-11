@@ -1,10 +1,10 @@
-package zscore_test
+package ztest_test
 
 import (
 	"testing"
 
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/zscore"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func (d *DummyExtractor) Extract(s *naro.NodeTimePeriodSummary) (float64, error)
 }
 
 func TestDetector(t *testing.T) {
-	detector := zscore.NewDetector(zscore.ZScore95, &DummyExtractor{})
+	detector := ztest.NewDetector(ztest.ZScore95, &DummyExtractor{})
 	var summaries []*naro.NodeTimePeriodSummary
 
 	// Push a lot of two event node summaries so that when we test

@@ -13,8 +13,8 @@ import (
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
 	narokube "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/zscore"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/zscore/extractors"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest/extractors"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/bbolt"
@@ -117,13 +117,13 @@ func main() {
 			sigchan := make(chan os.Signal)
 			signal.Notify(sigchan, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 
-			zscoreDetectorFactory := func() (naro.AnomalyDetector, error) {
+			ztestDetectorFactory := func() (naro.AnomalyDetector, error) {
 				extractor := extractors.NewDockerDaemonInstability()
-				return zscore.NewDetector(zscore.ZScore99, extractor), nil
+				return ztest.NewDetector(ztest.ZScore99, extractor), nil
 			}
 
 			detectorController := naro.NewDetectorController(24*time.Hour, 24*time.Hour,
-				time.Minute, []naro.AnomalyDetectorFactory{zscoreDetectorFactory}, s,
+				time.Minute, []naro.AnomalyDetectorFactory{ztestDetectorFactory}, s,
 				clock.NewClock(), nil)
 			detectorController.Start()
 

@@ -1,4 +1,4 @@
-package zscore
+package ztest
 
 import (
 	"fmt"

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/zscore/extractors"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest/extractors"
 	"github.com/stretchr/testify/assert"
 )
 
