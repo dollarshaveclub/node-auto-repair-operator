@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "code.cloudfoundry.org/clock"
+  packages = ["."]
+  revision = "e9dc86bbf0e5bbe6bf7ff5a6f71e048959b61f71"
+
+[[projects]]
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
   revision = "0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4"
@@ -328,6 +334,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1fab37dafaa8d99ac354ae87a5c52816ddb286efa7e37b8cb121916b82b42272"
+  inputs-digest = "3ee44223b39b54624f5d6e379740e6ab10890d69101fb1dd3523f39490b396c6"
   solver-name = "gps-cdcl"
   solver-version = 1
