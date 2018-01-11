@@ -72,7 +72,7 @@ func (n *KubeNodeEventEmitter) handleEvent(obj interface{}) {
 
 // Stop stops the KubeNodeEventEmitter from emitting events.
 func (n *KubeNodeEventEmitter) Stop() {
-	n.stopChan <- struct{}{}
+	close(n.stopChan)
 	n.wg.Wait()
 }
 

@@ -108,7 +108,7 @@ func (d *DetectorController) Start() {
 
 // Stop stops the detector's run loop.
 func (d *DetectorController) Stop() {
-	d.stopChan <- struct{}{}
+	close(d.stopChan)
 	d.wg.Wait()
 }
 
