@@ -152,7 +152,7 @@ func TestGetNodeTimePeriodSummaries(t *testing.T) {
 	futureEvent := &naro.NodeEvent{
 		ID:        "3",
 		NodeID:    node.ID,
-		CreatedAt: startTime.Add(time.Hour),
+		CreatedAt: startTime.Add(2 * time.Hour),
 	}
 	assert.NoError(t, store.CreateNodeEvent(futureEvent))
 
