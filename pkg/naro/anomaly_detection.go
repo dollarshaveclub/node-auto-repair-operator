@@ -1,7 +1,6 @@
 package naro
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -132,8 +131,6 @@ func (d *DetectorController) run() error {
 	if err != nil {
 		return errors.Wrapf(err, "error fetching NodeTimePeriodSummaries for detection")
 	}
-
-	fmt.Println(summaries)
 
 	for _, detector := range detectors {
 		for _, nodeSummary := range summaries {
