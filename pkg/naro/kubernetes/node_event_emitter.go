@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -16,6 +17,7 @@ const (
 
 // KubeNodeEventEmitter emits Kubernetes node events to handlers.
 type KubeNodeEventEmitter struct {
+	wg       *sync.WaitGroup
 	informer cache.SharedIndexInformer
 	stopChan chan struct{}
 	handlers []naro.KubeNodeEventHandler
@@ -25,6 +27,7 @@ type KubeNodeEventEmitter struct {
 func NewKubeNodeEventEmitter(informer cache.SharedIndexInformer, syncPeriod time.Duration,
 	handlers []naro.KubeNodeEventHandler) *KubeNodeEventEmitter {
 	n := &KubeNodeEventEmitter{
+		wg:       &sync.WaitGroup{},
 		informer: informer,
 		stopChan: make(chan struct{}),
 		handlers: handlers,
@@ -39,7 +42,11 @@ func NewKubeNodeEventEmitter(informer cache.SharedIndexInformer, syncPeriod time
 
 // Start begins the event emission process.
 func (n *KubeNodeEventEmitter) Start() {
-	go n.informer.Run(n.stopChan)
+	n.wg.Add(1)
+	go func() {
+		defer n.wg.Done()
+		n.informer.Run(n.stopChan)
+	}()
 }
 
 // handleEvent distributes an event to all subscribed handlers.
@@ -66,6 +73,7 @@ func (n *KubeNodeEventEmitter) handleEvent(obj interface{}) {
 // Stop stops the KubeNodeEventEmitter from emitting events.
 func (n *KubeNodeEventEmitter) Stop() {
 	n.stopChan <- struct{}{}
+	n.wg.Wait()
 }
 
 // SharedIndexInformerStub is a stub so that mockery generates a mock

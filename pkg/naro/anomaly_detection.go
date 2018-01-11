@@ -1,6 +1,7 @@
 package naro
 
 import (
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/clock"
@@ -23,13 +24,14 @@ type AnomalyDetectorFactory func() (AnomalyDetector, error)
 // AnomalyHandler is a type that can respond to anomalies. This is
 // where node repairs are wired in.
 type AnomalyHandler interface {
-	HandleAnomaly(*NodeTimePeriodSummary) error
+	HandleAnomaly(*NodeTimePeriodSummary, string) error
 }
 
 // DetectorController runs a set of AnomalyDetectors periodically,
 // informing handlers of when an anomaly is detected.
 type DetectorController struct {
 	stopChan            chan struct{}
+	wg                  *sync.WaitGroup
 	factories           []AnomalyDetectorFactory
 	trainingTimePeriod  time.Duration
 	detectionTimePeriod time.Duration
@@ -45,6 +47,7 @@ func NewDetectorController(trainingTimePeriod, detectionTimePeriod,
 	store Store, clock clock.Clock, handlers []AnomalyHandler) *DetectorController {
 	return &DetectorController{
 		stopChan:            make(chan struct{}),
+		wg:                  &sync.WaitGroup{},
 		factories:           factories,
 		trainingTimePeriod:  trainingTimePeriod,
 		detectionTimePeriod: detectionTimePeriod,
@@ -86,7 +89,9 @@ func (d *DetectorController) getDetectors() ([]AnomalyDetector, error) {
 // Start begins starts the controller's run loop.
 func (d *DetectorController) Start() {
 	ticker := d.clock.NewTicker(d.runInterval)
+	d.wg.Add(1)
 	go func() {
+		defer d.wg.Done()
 		for {
 			select {
 			case <-ticker.C():
@@ -104,6 +109,7 @@ func (d *DetectorController) Start() {
 // Stop stops the detector's run loop.
 func (d *DetectorController) Stop() {
 	d.stopChan <- struct{}{}
+	d.wg.Wait()
 }
 
 // Run performs anomaly detection, informing handlers of any
@@ -136,7 +142,7 @@ func (d *DetectorController) Run() error {
 				logrus.Infof("DetectorController: detected anomaly in %s with %s: %s", nodeSummary.Node, detector, meta)
 
 				for _, handler := range d.handlers {
-					if err := handler.HandleAnomaly(nodeSummary); err != nil {
+					if err := handler.HandleAnomaly(nodeSummary, meta); err != nil {
 						logrus.WithError(err).
 							Errorf("error handling anomalous NodeTimePeriodSummary")
 						continue
