@@ -123,7 +123,7 @@ func main() {
 			}
 
 			detectorController := naro.NewDetectorController(24*time.Hour, 24*time.Hour,
-				10*time.Second, []naro.AnomalyDetectorFactory{zscoreDetectorFactory}, s,
+				time.Minute, []naro.AnomalyDetectorFactory{zscoreDetectorFactory}, s,
 				clock.NewClock(), nil)
 			detectorController.Start()
 
