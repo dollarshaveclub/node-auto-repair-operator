@@ -110,8 +110,8 @@ func main() {
 
 			eventController := naro.NewKubeNodeEventController(db, k8s.CoreV1().Nodes(), s)
 
-			eventEmitter := narokube.NewKubeNodeEventEmitter(eventInformer, pollInterval)
-			eventEmitter.AddHandler(eventController)
+			eventEmitter := narokube.NewKubeNodeEventEmitter(eventInformer,
+				pollInterval, []naro.KubeNodeEventHandler{eventController})
 			eventEmitter.Start()
 
 			sigchan := make(chan os.Signal)

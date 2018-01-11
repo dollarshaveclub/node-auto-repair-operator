@@ -22,10 +22,12 @@ type KubeNodeEventEmitter struct {
 }
 
 // NewKubeNodeEventEmitter instantiates a new KubeNodeEventEmitter.
-func NewKubeNodeEventEmitter(informer cache.SharedIndexInformer, syncPeriod time.Duration) *KubeNodeEventEmitter {
+func NewKubeNodeEventEmitter(informer cache.SharedIndexInformer, syncPeriod time.Duration,
+	handlers []naro.KubeNodeEventHandler) *KubeNodeEventEmitter {
 	n := &KubeNodeEventEmitter{
 		informer: informer,
 		stopChan: make(chan struct{}),
+		handlers: handlers,
 	}
 
 	n.informer.AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
@@ -38,11 +40,6 @@ func NewKubeNodeEventEmitter(informer cache.SharedIndexInformer, syncPeriod time
 // Start begins the event emission process.
 func (n *KubeNodeEventEmitter) Start() {
 	go n.informer.Run(n.stopChan)
-}
-
-// AddHandler subscribes a handler to node events.
-func (n *KubeNodeEventEmitter) AddHandler(h naro.KubeNodeEventHandler) {
-	n.handlers = append(n.handlers, h)
 }
 
 // handleEvent distributes an event to all subscribed handlers.

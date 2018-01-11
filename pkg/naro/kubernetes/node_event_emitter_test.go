@@ -8,6 +8,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil/mocks"
 	"github.com/stretchr/testify/assert"
@@ -38,8 +39,8 @@ func TestNodeEventEmitterHandleEvent(t *testing.T) {
 	}).Return()
 	informer.On("Run", mock.Anything).Return()
 
-	emitter := kubernetes.NewKubeNodeEventEmitter(informer, time.Minute)
-	emitter.AddHandler(nodeEventHandler)
+	emitter := kubernetes.NewKubeNodeEventEmitter(informer, time.Minute,
+		[]naro.KubeNodeEventHandler{nodeEventHandler})
 	emitter.Start()
 
 	eventHandler.OnAdd(event)
