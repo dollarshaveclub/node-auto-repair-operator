@@ -18,6 +18,14 @@ type Store interface {
 	GetNodeTX(tx *bolt.Tx, nodeID string) (*Node, error)
 	GetNodeTimePeriodSummaries(start, end time.Time) ([]*NodeTimePeriodSummary, error)
 	GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) ([]*NodeTimePeriodSummary, error)
-	WalkNodeEvents(nodeID string, handler func(*NodeEvent) error) error
-	WalkNodeEventsTX(tx *bolt.Tx, nodeID string, handler func(*NodeEvent) error) error
+	DeleteNodeEvents(*Node) error
+	DeleteNodeEventsTX(*bolt.Tx, *Node) error
+	// WalkNodeEvents(node *Node, handler func(*NodeEvent) error) error
+	// WalkNodeEventsTX(tx *bolt.Tx, nodeID string, handler func(*NodeEvent) error) error
+}
+
+// TransactionCreator is a type that can create boltdb transactions.
+type TransactionCreator interface {
+	View(fn func(*bolt.Tx) error) error
+	Update(fn func(*bolt.Tx) error) error
 }

@@ -251,43 +251,25 @@ func (n *Store) CreateNodeEventTX(tx *bolt.Tx, event *naro.NodeEvent) error {
 	return nil
 }
 
-// WalkNodeEvents walks through all events for a Node, calling a
-// handler for each individual event.
-func (n *Store) WalkNodeEvents(nodeID string, handler func(*naro.NodeEvent) error) error {
-	if err := n.db.View(func(tx *bolt.Tx) error {
-		if err := n.WalkNodeEventsTX(tx, nodeID, handler); err != nil {
-			return errors.Wrapf(err, "error walking through node events")
+// DeleteNodeEvents deletes all of the NodeEvents for a Node.
+func (n *Store) DeleteNodeEvents(node *naro.Node) error {
+	if err := n.db.Update(func(tx *bolt.Tx) error {
+		if err := n.DeleteNodeEventsTX(tx, node); err != nil {
+			return errors.Wrapf(err, "error deleting node events in transaction")
 		}
 		return nil
 	}); err != nil {
-		return errors.Wrapf(err, "error viewing database")
+		return errors.Wrapf(err, "error updating database")
 	}
 
 	return nil
 }
 
-// WalkNodeEventsTX walks through all events for a Node, calling a
-// handler for each individual event.
-func (n *Store) WalkNodeEventsTX(tx *bolt.Tx, nodeID string, handler func(*naro.NodeEvent) error) error {
-	// If the event bucket doesn't exist, then no events have been
-	// created.
+// DeleteNodeEventsTX deletes all of the NodeEvents for a Node.
+func (n *Store) DeleteNodeEventsTX(tx *bolt.Tx, node *naro.Node) error {
 	eventsBucket := tx.Bucket(eventsBucketName)
-	eventBucket := eventsBucket.Bucket(nodeEventBucket(nodeID))
-	if eventBucket == nil {
-		return nil
-	}
-
-	if err := eventBucket.ForEach(func(_ []byte, v []byte) error {
-		var event naro.NodeEvent
-		if err := json.Unmarshal(v, &event); err != nil {
-			return errors.Wrapf(err, "error unmarshaling node event")
-		}
-		if err := handler(&event); err != nil {
-			return errors.Wrapf(err, "error handling node event")
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrapf(err, "error iterating through node event bucket")
+	if err := eventsBucket.DeleteBucket([]byte(node.ID)); err != nil {
+		return errors.Wrapf(err, "error deleting event bucket for %s", node)
 	}
 
 	return nil

@@ -72,52 +72,6 @@ func TestNodeCRUD(t *testing.T) {
 	})
 }
 
-func TestNodeEventCreateAndWalk(t *testing.T) {
-	db, cleaner := testutil.DB(t)
-	defer cleaner()
-
-	store, err := boltdb.NewStore(db)
-	assert.NoError(t, err)
-
-	event := &naro.NodeEvent{
-		ID:        "fdsa-1",
-		NodeID:    "asdf",
-		CreatedAt: time.Now(),
-	}
-	event2 := &naro.NodeEvent{
-		ID:        "fdsa-2",
-		NodeID:    "asdf",
-		CreatedAt: time.Now(),
-	}
-
-	t.Run("create", func(t *testing.T) {
-		err := db.Update(func(tx *bolt.Tx) error {
-			assert.NoError(t, store.CreateNodeEventTX(tx, event))
-			return nil
-		})
-		assert.NoError(t, err)
-		err = db.Update(func(tx *bolt.Tx) error {
-			assert.NoError(t, store.CreateNodeEventTX(tx, event2))
-			return nil
-		})
-		assert.NoError(t, err)
-	})
-
-	t.Run("walk", func(t *testing.T) {
-		var events []*naro.NodeEvent
-		err := db.Update(func(tx *bolt.Tx) error {
-			err := store.WalkNodeEventsTX(tx, event.NodeID, func(e *naro.NodeEvent) error {
-				events = append(events, e)
-				return nil
-			})
-			assert.NoError(t, err)
-			return nil
-		})
-		assert.NoError(t, err)
-		assert.Equal(t, 2, len(events), "%v", events)
-	})
-}
-
 func TestGetNodeTimePeriodSummaries(t *testing.T) {
 	db, cleaner := testutil.DB(t)
 	defer cleaner()

@@ -11,10 +11,11 @@ import (
 
 // Node represents metadata about a Kubernetes node.
 type Node struct {
-	ID        string
-	Name      string
-	CreatedAt time.Time
-	Source    *v1.Node
+	ID           string
+	Name         string
+	CreatedAt    time.Time
+	Source       *v1.Node
+	RepairStatus RepairStatus
 }
 
 // String is the printable version of a Node.
@@ -28,10 +29,11 @@ func NewNodeFromKubeNode(node *v1.Node) *Node {
 	return &Node{
 		// We can't use MachineID because it isn't unique
 		// between instances that share an AMI.
-		ID:        node.Status.NodeInfo.SystemUUID,
-		Name:      node.ObjectMeta.Name,
-		CreatedAt: node.ObjectMeta.CreationTimestamp.Time,
-		Source:    node,
+		ID:           node.Status.NodeInfo.SystemUUID,
+		Name:         node.ObjectMeta.Name,
+		CreatedAt:    node.ObjectMeta.CreationTimestamp.Time,
+		Source:       node,
+		RepairStatus: RepairStatusHealthy,
 	}
 }
 
