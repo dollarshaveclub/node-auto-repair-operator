@@ -33,6 +33,13 @@ func TestNodeCRUD(t *testing.T) {
 		},
 	}
 
+	event := &naro.NodeEvent{
+		ID:        "1",
+		NodeID:    node.ID,
+		CreatedAt: time.Now(),
+	}
+	assert.NoError(t, store.CreateNodeEvent(event))
+
 	t.Run("create", func(t *testing.T) {
 		err := db.Update(func(tx *bolt.Tx) error {
 			return store.CreateNodeTX(tx, node)
@@ -69,6 +76,14 @@ func TestNodeCRUD(t *testing.T) {
 			return nil
 		})
 		assert.NoError(t, err)
+	})
+
+	t.Run("get-node-events", func(t *testing.T) {
+		events, err := store.GetNodeEvents(node)
+		if assert.NoError(t, err) {
+			assert.Len(t, events, 1)
+			assert.Equal(t, event.ID, events[0].ID)
+		}
 	})
 }
 

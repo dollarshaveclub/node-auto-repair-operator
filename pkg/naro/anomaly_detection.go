@@ -136,6 +136,8 @@ func (d *DetectorController) run() error {
 		for _, nodeSummary := range summaries {
 			logrus.Debugf("DetectorController: attempting to detect anomaly in %s with %s", nodeSummary.Node, detector)
 
+			nodeSummary.RemoveOlderRepairedEvents()
+
 			isAnomalous, meta, err := detector.IsAnomalous(nodeSummary)
 			if err != nil {
 				logrus.WithError(err).Errorf("error detecting anomaly in NodeTimePeriodSummary")

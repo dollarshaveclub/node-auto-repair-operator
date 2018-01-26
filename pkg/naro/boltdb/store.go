@@ -214,6 +214,42 @@ func (n *Store) DeleteNodeTX(tx *bolt.Tx, node *naro.Node) error {
 	return nil
 }
 
+// GetNodeEvents returns all of the events for a node.
+func (n *Store) GetNodeEvents(node *naro.Node) ([]*naro.NodeEvent, error) {
+	var events []*naro.NodeEvent
+	if err := n.db.View(func(tx *bolt.Tx) error {
+		e, err := n.GetNodeEventsTX(tx, node)
+		if err != nil {
+			return errors.Wrapf(err, "error fetching NodeEvents")
+		}
+		events = e
+		return nil
+	}); err != nil {
+		return nil, errors.Wrapf(err, "error opening transaction")
+	}
+
+	return events, nil
+}
+
+// GetNodeEventsTX returns all of the events for a node.
+func (n *Store) GetNodeEventsTX(tx *bolt.Tx, node *naro.Node) ([]*naro.NodeEvent, error) {
+	eventsBucket := tx.Bucket(eventsBucketName)
+	eventBucket := eventsBucket.Bucket(nodeEventBucket(node.ID))
+
+	var events []*naro.NodeEvent
+	cursor := eventBucket.Cursor()
+	for k, e := cursor.First(); k != nil; k, e = cursor.Next() {
+		var event naro.NodeEvent
+		if err := json.Unmarshal(e, &event); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshalling NodeEvent")
+		}
+		events = append(events, &event)
+	}
+
+	return events, nil
+
+}
+
 // CreateNodeEvent persists a NodeEvent.
 func (n *Store) CreateNodeEvent(event *naro.NodeEvent) error {
 	if err := n.db.Update(func(tx *bolt.Tx) error {

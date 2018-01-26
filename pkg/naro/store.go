@@ -11,6 +11,8 @@ type Store interface {
 	CreateNode(node *Node) error
 	CreateNodeEvent(event *NodeEvent) error
 	CreateNodeEventTX(tx *bolt.Tx, event *NodeEvent) error
+	GetNodeEvents(*Node) ([]*NodeEvent, error)
+	GetNodeEventsTX(*bolt.Tx, *Node) ([]*NodeEvent, error)
 	CreateNodeTX(tx *bolt.Tx, node *Node) error
 	DeleteNode(node *Node) error
 	DeleteNodeTX(tx *bolt.Tx, node *Node) error
@@ -20,8 +22,6 @@ type Store interface {
 	GetNodeTimePeriodSummariesTX(tx *bolt.Tx, start, end time.Time) ([]*NodeTimePeriodSummary, error)
 	DeleteNodeEvents(*Node) error
 	DeleteNodeEventsTX(*bolt.Tx, *Node) error
-	// WalkNodeEvents(node *Node, handler func(*NodeEvent) error) error
-	// WalkNodeEventsTX(tx *bolt.Tx, nodeID string, handler func(*NodeEvent) error) error
 }
 
 // TransactionCreator is a type that can create boltdb transactions.

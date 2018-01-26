@@ -4,10 +4,16 @@ import (
 	"context"
 	"time"
 
+	"code.cloudfoundry.org/clock"
+
 	bolt "github.com/coreos/bbolt"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
+
+// RepairStatus describes the different states of the node repair
+// state machine.
+type RepairStatus string
 
 const (
 	RepairStatusHealthy    RepairStatus = "healthy"
@@ -15,27 +21,34 @@ const (
 	RepairStatusFailed     RepairStatus = "failed"
 )
 
-type RepairStatus string
-
+// NodeDrainer describes an interface that can drain pods from a
+// Kubernetes node.
 type NodeDrainer interface {
 	Drain(context.Context, *Node) error
 }
 
+// RepairStrategy describes a node repair strategy. Example: a
+// strategy can restart a node.
 type RepairStrategy interface {
 	RepairNode(context.Context, *Node) error
 }
 
+// NodeRepairer can repair a Kubernetes node using a specified repair
+// strategy.
 type NodeRepairer struct {
+	clock      clock.Clock
 	txCreator  TransactionCreator
 	store      Store
 	strategies []RepairStrategy
 	drainer    NodeDrainer
 }
 
+// RepairNode conducts the node repair process on a Kubernetes node
+// using the input strategy.
 func (n *NodeRepairer) RepairNode(ctx context.Context, node *Node, strategy RepairStrategy) error {
 	// Mark node as being repaired
 	if err := n.txCreator.Update(func(tx *bolt.Tx) error {
-		if node.RepairStatus != "" {
+		if node.RepairStatus != RepairStatusHealthy {
 			return errors.Errorf("error: can't repair %s since it's in state: %s", node, node.RepairStatus)
 		}
 
@@ -73,12 +86,7 @@ func (n *NodeRepairer) RepairNode(ctx context.Context, node *Node, strategy Repa
 		return errorHandler(errors.Wrapf(err, "error repairing %s", node))
 	}
 
-	// Archive NodeEvents. This is necessary so that the node
-	// isn't rescheduled to be repaired.
-	if err := n.store.DeleteNodeEvents(node); err != nil {
-		return errors.Wrapf(err, "error deleting NodeEvents for %s", node)
-	}
-
+	node.RepairedAt = n.clock.Now()
 	node.RepairStatus = RepairStatusHealthy
 	if err := n.store.CreateNode(node); err != nil {
 		return errors.Wrapf(err, "error updating Node repair status")

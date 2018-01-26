@@ -32,13 +32,10 @@ func TestKubeNodeEventControllerHandleKubeNodeEvent(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, n)
 
-		var events []*naro.NodeEvent
-		eventHandler := func(e *naro.NodeEvent) error {
-			events = append(events, e)
-			return nil
+		events, err := store.GetNodeEvents(&naro.Node{ID: node.Status.NodeInfo.SystemUUID})
+		if assert.NoError(t, err) {
+			assert.Len(t, events, 1)
 		}
-		assert.NoError(t, store.WalkNodeEvents(node.Status.NodeInfo.SystemUUID, eventHandler))
-		assert.Len(t, events, 1)
 	}
 }
 

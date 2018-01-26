@@ -14,6 +14,7 @@ type Node struct {
 	ID           string
 	Name         string
 	CreatedAt    time.Time
+	RepairedAt   time.Time
 	Source       *v1.Node
 	RepairStatus RepairStatus
 }
@@ -65,4 +66,16 @@ type NodeTimePeriodSummary struct {
 	Events      []*NodeEvent
 	PeriodStart time.Time
 	PeriodEnd   time.Time
+}
+
+// RemoveOlderRepairedEvents removes events from the summary that
+// occurred before the Node's RepairedAt value.
+func (n *NodeTimePeriodSummary) RemoveOlderRepairedEvents() {
+	var recentEvents []*NodeEvent
+	for _, e := range n.Events {
+		if e.CreatedAt.After(n.Node.RepairedAt) {
+			recentEvents = append(recentEvents, e)
+		}
+	}
+	n.Events = recentEvents
 }
