@@ -109,10 +109,15 @@ func (k *KubeNodeEventController) HandleKubeNodeEvent(e *corev1.Event) error {
 	}
 
 	if err := k.db.Update(func(tx *bolt.Tx) error {
-		// Create/update node
-		node := NewNodeFromKubeNode(kubeNode)
-		if err := k.store.CreateNodeTX(tx, node); err != nil {
-			return errors.Wrapf(err, "error creating Node")
+		node, err := k.store.GetNode(NewNodeFromKubeNode(kubeNode).ID)
+		if err != nil {
+			return errors.Wrapf(err, "error fetching Node")
+		}
+		if node == nil {
+			node = NewNodeFromKubeNode(kubeNode)
+			if err := k.store.CreateNodeTX(tx, node); err != nil {
+				return errors.Wrapf(err, "error creating Node")
+			}
 		}
 
 		event := NewNodeEventFromKubeEvent(node, e)
