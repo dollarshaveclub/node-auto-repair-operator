@@ -4,7 +4,7 @@
 [[projects]]
   branch = "master"
   name = "code.cloudfoundry.org/clock"
-  packages = [".","fakeclock"]
+  packages = ["."]
   revision = "e9dc86bbf0e5bbe6bf7ff5a6f71e048959b61f71"
 
 [[projects]]
@@ -168,6 +168,12 @@
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  name = "github.com/jonboulle/clockwork"
+  packages = ["."]
+  revision = "2eee05ed794112d45db504eb05aa693efd2b8b09"
+  version = "v0.1.0"
 
 [[projects]]
   name = "github.com/json-iterator/go"
@@ -346,6 +352,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4a7c2d8c7302d1fbb8f14f0ef8752f873d6c6bd8b7ed9d915f639957384d141d"
+  inputs-digest = "e601a7bd6e5ad536f57071334cae14fdceee9e7a8f381575bd1bf222dad2470b"
   solver-name = "gps-cdcl"
   solver-version = 1
