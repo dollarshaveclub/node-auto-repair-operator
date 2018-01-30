@@ -21,6 +21,13 @@ const (
 	RepairStatusFailed     RepairStatus = "failed"
 )
 
+// NodeTainter describes a taint that prevents pods from being
+// scheduled onto a node.
+type NodeTainter interface {
+	Taint(*Node) error
+	RemoveTaint(*Node) error
+}
+
 // NodeDrainer describes an interface that can drain pods from a
 // Kubernetes node.
 type NodeDrainer interface {
@@ -41,6 +48,7 @@ type NodeRepairer struct {
 	store      Store
 	strategies []RepairStrategy
 	drainer    NodeDrainer
+	tainter    NodeTainter
 }
 
 // RepairNode conducts the node repair process on a Kubernetes node
@@ -72,6 +80,11 @@ func (n *NodeRepairer) RepairNode(ctx context.Context, node *Node, strategy Repa
 		return nil
 	}
 
+	// Add NoSchedule taint
+	if err := n.tainter.Taint(node); err != nil {
+		return errorHandler(errors.Wrapf(err, "error tainting %s", node))
+	}
+
 	// Drain node
 	dctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
@@ -84,6 +97,11 @@ func (n *NodeRepairer) RepairNode(ctx context.Context, node *Node, strategy Repa
 	defer cancel()
 	if err := strategy.RepairNode(rctx, node); err != nil {
 		return errorHandler(errors.Wrapf(err, "error repairing %s", node))
+	}
+
+	// Add NoSchedule taint
+	if err := n.tainter.RemoveTaint(node); err != nil {
+		return errorHandler(errors.Wrapf(err, "error removing tainting %s", node))
 	}
 
 	node.RepairedAt = n.clock.Now()
