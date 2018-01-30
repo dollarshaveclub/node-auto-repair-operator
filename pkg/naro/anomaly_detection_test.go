@@ -4,12 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"code.cloudfoundry.org/clock/fakeclock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil/mocks"
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -22,17 +23,20 @@ func TestDetectorControllerRun(t *testing.T) {
 	assert.NoError(t, err)
 
 	trainingTimePeriod := 100 * time.Second
-	detectionTimePeriod := 2 * time.Second
+	detectionTimePeriod := 4 * time.Second
 	runInterval := 3 * time.Second
 
-	currentTime := time.Now()
-
-	node := naro.NewNodeFromKubeNode(testutil.FakeKubeNode(t))
-	e := naro.NewNodeEventFromKubeEvent(node, testutil.FakeKubeNodeEvent(t))
-	assert.NoError(t, store.CreateNode(node))
-	assert.NoError(t, store.CreateNodeEvent(e))
-
 	t.Run("detect-anomaly", func(t *testing.T) {
+		clock := clockwork.NewFakeClock()
+		currentTime := clock.Now()
+
+		node := naro.NewNodeFromKubeNode(testutil.FakeKubeNode(t))
+		event := testutil.FakeKubeNodeEvent(t)
+		event.LastTimestamp = metav1.NewTime(currentTime.Add(-time.Second))
+		e := naro.NewNodeEventFromKubeEvent(node, event)
+		assert.NoError(t, store.CreateNode(node))
+		assert.NoError(t, store.CreateNodeEvent(e))
+
 		detector := &mocks.AnomalyDetector{}
 		detector.On("String").Return("AnomalyDetector")
 		detector.On("Train", mock.MatchedBy(func(summaries []*naro.NodeTimePeriodSummary) bool {
@@ -55,19 +59,28 @@ func TestDetectorControllerRun(t *testing.T) {
 		}), "metadata").Return(nil)
 		defer handler.AssertExpectations(t)
 
-		clock := fakeclock.NewFakeClock(currentTime)
-
 		controller := naro.NewDetectorController(trainingTimePeriod, detectionTimePeriod,
 			runInterval, []naro.AnomalyDetectorFactory{factory}, store, clock,
 			[]naro.AnomalyHandler{handler},
 		)
 
 		controller.Start()
-		clock.WaitForNWatchersAndIncrement(runInterval, 1)
+		clock.BlockUntil(1)
+		clock.Advance(runInterval)
 		controller.Stop()
 	})
 
 	t.Run("no-anomaly", func(t *testing.T) {
+		clock := clockwork.NewFakeClock()
+		currentTime := clock.Now()
+
+		node := naro.NewNodeFromKubeNode(testutil.FakeKubeNode(t))
+		event := testutil.FakeKubeNodeEvent(t)
+		event.LastTimestamp = metav1.NewTime(currentTime.Add(-time.Second))
+		e := naro.NewNodeEventFromKubeEvent(node, event)
+		assert.NoError(t, store.CreateNode(node))
+		assert.NoError(t, store.CreateNodeEvent(e))
+
 		detector := &mocks.AnomalyDetector{}
 		detector.On("String").Return("AnomalyDetector")
 		detector.On("Train", mock.MatchedBy(func(summaries []*naro.NodeTimePeriodSummary) bool {
@@ -84,14 +97,14 @@ func TestDetectorControllerRun(t *testing.T) {
 		}
 
 		handler := &mocks.AnomalyHandler{}
-		clock := fakeclock.NewFakeClock(currentTime)
 		controller := naro.NewDetectorController(trainingTimePeriod, detectionTimePeriod,
 			runInterval, []naro.AnomalyDetectorFactory{factory}, store, clock,
 			[]naro.AnomalyHandler{handler},
 		)
 
 		controller.Start()
-		clock.WaitForNWatchersAndIncrement(runInterval, 1)
+		clock.BlockUntil(1)
+		clock.Advance(runInterval)
 		controller.Stop()
 	})
 }

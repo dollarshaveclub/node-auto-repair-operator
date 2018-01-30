@@ -6,8 +6,6 @@ import (
 	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/clock"
-
 	"encoding/json"
 
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
@@ -15,6 +13,7 @@ import (
 	narokube "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest/extractors"
+	"github.com/jonboulle/clockwork"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/bbolt"
@@ -124,14 +123,19 @@ func main() {
 
 			detectorController := naro.NewDetectorController(24*time.Hour, 24*time.Hour,
 				time.Minute, []naro.AnomalyDetectorFactory{ztestDetectorFactory}, s,
-				clock.NewClock(), nil)
+				clockwork.NewRealClock(), nil)
 			detectorController.Start()
 
 			select {
 			case <-sigchan:
 				logrus.Info("exiting")
+
+				logrus.Info("stopping KubeNodeEventEmitter")
 				eventEmitter.Stop()
+
+				logrus.Info("stopping DetectorController")
 				detectorController.Stop()
+
 				if err := db.Close(); err != nil {
 					logrus.Fatal(err)
 				}

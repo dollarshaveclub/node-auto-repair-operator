@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/clock"
 	"github.com/Sirupsen/logrus"
+	"github.com/jonboulle/clockwork"
 	"github.com/pkg/errors"
 )
 
@@ -37,14 +37,14 @@ type DetectorController struct {
 	detectionTimePeriod time.Duration
 	runInterval         time.Duration
 	store               Store
-	clock               clock.Clock
+	clock               clockwork.Clock
 	handlers            []AnomalyHandler
 }
 
 // NewDetectorController returns a new DetectorController.
 func NewDetectorController(trainingTimePeriod, detectionTimePeriod,
 	runInterval time.Duration, factories []AnomalyDetectorFactory,
-	store Store, clock clock.Clock, handlers []AnomalyHandler) *DetectorController {
+	store Store, clock clockwork.Clock, handlers []AnomalyHandler) *DetectorController {
 	return &DetectorController{
 		stopChan:            make(chan struct{}),
 		wg:                  &sync.WaitGroup{},
@@ -95,16 +95,13 @@ func (d *DetectorController) Start() {
 			select {
 			case <-d.stopChan:
 				return
-			default:
+			case <-d.clock.After(d.runInterval):
 			}
 
 			logrus.Debugf("DetectorController: starting run loop")
 			if err := d.run(); err != nil {
 				logrus.WithError(err).Errorf("error running DetectorController")
 			}
-
-			logrus.Debugf("DetectorController: finished run loop, sleeping for %s", d.runInterval)
-			d.clock.Sleep(d.runInterval)
 		}
 	}()
 }
@@ -153,7 +150,6 @@ func (d *DetectorController) run() error {
 						continue
 					}
 				}
-
 			}
 		}
 	}
