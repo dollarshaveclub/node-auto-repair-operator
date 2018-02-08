@@ -1,8 +1,8 @@
 package extractors
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+	"github.com/sirupsen/logrus"
 )
 
 // DockerDaemonInstability is a zscore.FeatureExtractor that tries to

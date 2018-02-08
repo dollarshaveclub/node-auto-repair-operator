@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	bolt "github.com/coreos/bbolt"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

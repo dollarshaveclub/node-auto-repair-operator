@@ -3,10 +3,10 @@ package naro_test
 import (
 	"testing"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"k8s.io/client-go/kubernetes/fake"

@@ -7,10 +7,10 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/testutil/mocks"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	mock "github.com/stretchr/testify/mock"
 )

@@ -3,10 +3,10 @@ package ztest
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	"github.com/montanaflynn/stats"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (

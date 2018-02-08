@@ -15,9 +15,9 @@ import (
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest/extractors"
 	"github.com/jonboulle/clockwork"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/coreos/bbolt"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	v1informers "k8s.io/client-go/informers/core/v1"

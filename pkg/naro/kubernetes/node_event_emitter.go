@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+	"github.com/sirupsen/logrus"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"

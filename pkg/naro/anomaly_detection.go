@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/jonboulle/clockwork"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // AnomalyDetector is a type that can be trained to detect issues
