@@ -36,9 +36,7 @@ type NodeDrainer interface {
 
 // RepairStrategy describes a node repair strategy. Example: a
 // strategy can restart a node.
-type RepairStrategy interface {
-	RepairNode(context.Context, *Node) error
-}
+type RepairStrategy func(context.Context, *Node) error
 
 // NodeRepairer can repair a Kubernetes node using a specified repair
 // strategy.
@@ -95,7 +93,7 @@ func (n *NodeRepairer) RepairNode(ctx context.Context, node *Node, strategy Repa
 	// Repair node
 	rctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	if err := strategy.RepairNode(rctx, node); err != nil {
+	if err := strategy(rctx, node); err != nil {
 		return errorHandler(errors.Wrapf(err, "error repairing %s", node))
 	}
 

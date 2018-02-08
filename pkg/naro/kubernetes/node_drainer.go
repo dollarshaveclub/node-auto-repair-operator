@@ -14,8 +14,8 @@ import (
 	kube_record "k8s.io/client-go/tools/record"
 
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -43,6 +43,7 @@ func (n *NodeDrainer) Drain(ctx context.Context, node *naro.Node) error {
 		return errors.Wrapf(err, "error listing pods for node")
 	}
 
+	// TODO: add recorder
 	if err := drainNode(node.Source, pods.Items, n.client, nil, n.maxGracefulTerminationSec,
 		MaxPodEvictionTime, EvictionRetryTime); err != nil {
 		return errors.Wrapf(err, "error draining node")
@@ -94,17 +95,17 @@ func drainNode(node *apiv1.Node, pods []apiv1.Pod, client kubernetes.Interface, 
 		for _, pod := range pods {
 			podreturned, err := client.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
 			if err == nil {
-				glog.Errorf("Not deleted yet %v", podreturned)
+				logrus.Errorf("Not deleted yet %v", podreturned)
 				allGone = false
 				break
 			}
 			if !kube_errors.IsNotFound(err) {
-				glog.Errorf("Failed to check pod %s/%s: %v", pod.Namespace, pod.Name, err)
+				logrus.Errorf("Failed to check pod %s/%s: %v", pod.Namespace, pod.Name, err)
 				allGone = false
 			}
 		}
 		if allGone {
-			glog.V(1).Infof("All pods removed from %s", node.Name)
+			logrus.Infof("All pods removed from %s", node.Name)
 			// Let the deferred function know there is no need for cleanup
 			return nil
 		}
@@ -143,7 +144,7 @@ func evictPod(podToEvict *apiv1.Pod, client kubernetes.Interface, recorder kube_
 			return nil
 		}
 	}
-	glog.Errorf("Failed to evict pod %s, error: %v", podToEvict.Name, lastError)
+	logrus.Errorf("Failed to evict pod %s, error: %v", podToEvict.Name, lastError)
 	recorder.Eventf(podToEvict, apiv1.EventTypeWarning, "ScaleDownFailed", "failed to delete pod for ScaleDown")
 	return fmt.Errorf("Failed to evict pod %s/%s within allowed timeout (last error: %v)", podToEvict.Namespace, podToEvict.Name, lastError)
 }
