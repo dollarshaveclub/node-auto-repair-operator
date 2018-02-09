@@ -26,12 +26,19 @@ const (
 	MaxPodEvictionTime = 2 * time.Minute
 	// EvictionRetryTime is the time after CA retries failed pod eviction.
 	EvictionRetryTime = 10 * time.Second
+	// MaxGracefulTerminationSec is the maximum amount of time to
+	// wait for all pods on a node to terminate.
+	MaxGracefulTerminationSec = 60 * 30
 )
 
 // NodeDrainer drains a Kubernetes node.
 type NodeDrainer struct {
-	client                    kubernetes.Interface
-	maxGracefulTerminationSec int
+	client kubernetes.Interface
+}
+
+// NewNodeDrainer instantiates a new NodeDrainer.
+func NewNodeDrainer(client kubernetes.Interface) *NodeDrainer {
+	return &NodeDrainer{client: client}
 }
 
 // Drain performs the drain operation on a node to completion.
@@ -44,7 +51,7 @@ func (n *NodeDrainer) Drain(ctx context.Context, node *naro.Node) error {
 	}
 
 	// TODO: add recorder
-	if err := drainNode(node.Source, pods.Items, n.client, nil, n.maxGracefulTerminationSec,
+	if err := drainNode(node.Source, pods.Items, n.client, nil, MaxGracefulTerminationSec,
 		MaxPodEvictionTime, EvictionRetryTime); err != nil {
 		return errors.Wrapf(err, "error draining node")
 	}

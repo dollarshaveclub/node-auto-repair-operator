@@ -11,12 +11,15 @@ import (
 
 // Node represents metadata about a Kubernetes node.
 type Node struct {
-	ID           string
-	Name         string
-	CreatedAt    time.Time
-	RepairedAt   time.Time
-	Source       *v1.Node
-	RepairStatus RepairStatus
+	ID                         string
+	Name                       string
+	CreatedAt                  time.Time
+	RepairedAt                 time.Time
+	Source                     *v1.Node
+	RepairStatus               RepairStatus
+	RepairConfigurationName    RepairConfigurationName
+	RepairConfigurationVersion RepairConfigurationVersion
+	RepairStage                RepairStage
 }
 
 // String is the printable version of a Node.

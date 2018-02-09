@@ -1,6 +1,7 @@
 package naro
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -24,7 +25,7 @@ type AnomalyDetectorFactory func() (AnomalyDetector, error)
 // AnomalyHandler is a type that can respond to anomalies. This is
 // where node repairs are wired in.
 type AnomalyHandler interface {
-	HandleAnomaly(*NodeTimePeriodSummary, string) error
+	HandleAnomaly(context.Context, *NodeTimePeriodSummary, string) error
 }
 
 // DetectorController runs a set of AnomalyDetectors periodically,
@@ -144,7 +145,7 @@ func (d *DetectorController) run() error {
 				logrus.Infof("DetectorController: detected anomaly in %s with %s: %s", nodeSummary.Node, detector, meta)
 
 				for _, handler := range d.handlers {
-					if err := handler.HandleAnomaly(nodeSummary, meta); err != nil {
+					if err := handler.HandleAnomaly(context.Background(), nodeSummary, meta); err != nil {
 						logrus.WithError(err).
 							Errorf("error handling anomalous NodeTimePeriodSummary")
 						continue

@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
+	naroaws "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/aws"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
 	narokube "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/kubernetes"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest"
-	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/ztest/extractors"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/statistics/ztest"
+	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/statistics/ztest/extractors"
 	"github.com/jonboulle/clockwork"
 
 	"github.com/coreos/bbolt"
@@ -113,8 +114,23 @@ func main() {
 				pollInterval, []naro.KubeNodeEventHandler{eventController})
 			eventEmitter.Start()
 
-			sigchan := make(chan os.Signal)
-			signal.Notify(sigchan, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
+			drainer := narokube.NewNodeDrainer(k8s)
+
+			tainter := narokube.NewNodeRepairTainter(k8s)
+
+			repairer := naro.NewNodeRepairer(clockwork.NewRealClock(), db, s, drainer, tainter)
+
+			rebooter := naroaws.NewInstanceRebooter(nil)
+
+			repairConfiguration := &naro.RepairConfiguration{
+				Name:                    "default",
+				Version:                 "0.0.1",
+				OrderedRepairStrategies: []naro.RepairStrategy{rebooter.Reboot},
+			}
+
+			repairController := naro.NewRepairController(clockwork.NewRealClock(),
+				repairConfiguration, db, s, repairer,
+			)
 
 			ztestDetectorFactory := func() (naro.AnomalyDetector, error) {
 				extractor := extractors.NewDockerDaemonInstability()
@@ -123,8 +139,11 @@ func main() {
 
 			detectorController := naro.NewDetectorController(24*time.Hour, 24*time.Hour,
 				time.Minute, []naro.AnomalyDetectorFactory{ztestDetectorFactory}, s,
-				clockwork.NewRealClock(), nil)
+				clockwork.NewRealClock(), []naro.AnomalyHandler{repairController})
 			detectorController.Start()
+
+			sigchan := make(chan os.Signal)
+			signal.Notify(sigchan, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 
 			select {
 			case <-sigchan:
