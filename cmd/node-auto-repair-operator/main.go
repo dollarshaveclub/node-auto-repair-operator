@@ -91,7 +91,7 @@ func main() {
 			if err != nil {
 				logrus.Fatal(err)
 			}
-			s, err := boltdb.NewStore(db)
+			store, err := boltdb.NewStore(db)
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -108,7 +108,7 @@ func main() {
 				pollInterval,
 				cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
-			eventController := naro.NewKubeNodeEventController(db, k8s.CoreV1().Nodes(), s)
+			eventController := naro.NewKubeNodeEventController(db, k8s.CoreV1().Nodes(), store)
 
 			eventEmitter := narokube.NewKubeNodeEventEmitter(eventInformer,
 				pollInterval, []naro.KubeNodeEventHandler{eventController})
@@ -118,7 +118,7 @@ func main() {
 
 			tainter := narokube.NewNodeRepairTainter(k8s)
 
-			repairer := naro.NewNodeRepairer(clockwork.NewRealClock(), db, s, drainer, tainter)
+			repairer := naro.NewNodeRepairer(clockwork.NewRealClock(), db, store, drainer, tainter)
 
 			rebooter := naroaws.NewInstanceRebooter(nil)
 
@@ -129,7 +129,7 @@ func main() {
 			}
 
 			repairController := naro.NewRepairController(clockwork.NewRealClock(),
-				repairConfiguration, db, s, repairer,
+				repairConfiguration, db, store, repairer,
 			)
 
 			ztestDetectorFactory := func() (naro.AnomalyDetector, error) {
@@ -138,7 +138,7 @@ func main() {
 			}
 
 			detectorController := naro.NewDetectorController(24*time.Hour, 24*time.Hour,
-				time.Minute, []naro.AnomalyDetectorFactory{ztestDetectorFactory}, s,
+				time.Minute, []naro.AnomalyDetectorFactory{ztestDetectorFactory}, store,
 				clockwork.NewRealClock(), []naro.AnomalyHandler{repairController})
 			detectorController.Start()
 
