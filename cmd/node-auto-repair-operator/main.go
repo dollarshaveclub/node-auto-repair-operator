@@ -8,6 +8,8 @@ import (
 
 	"encoding/json"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro"
 	naroaws "github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/aws"
 	"github.com/dollarshaveclub/node-auto-repair-operator/pkg/naro/boltdb"
@@ -95,11 +97,19 @@ func main() {
 			if err != nil {
 				logrus.Fatal(err)
 			}
-
 			k8s, err := k8sClient()
 			if err != nil {
 				logrus.Fatal(err)
 			}
+
+			if os.Getenv("AWS_ACCESS_KEY_ID") == "" ||
+				os.Getenv("AWS_SECRET_ACCESS_KEY") == "" ||
+				os.Getenv("AWS_REGION") == "" {
+				logrus.Fatal("missing either AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, or AWS_REGION environment variables")
+			}
+
+			awsSession := session.Must(session.NewSession())
+			ec2Client := ec2.New(awsSession)
 
 			pollInterval := time.Second * 5
 
@@ -120,7 +130,7 @@ func main() {
 
 			repairer := naro.NewNodeRepairer(clockwork.NewRealClock(), db, store, drainer, tainter)
 
-			rebooter := naroaws.NewInstanceRebooter(nil)
+			rebooter := naroaws.NewInstanceRebooter(ec2Client)
 
 			repairConfiguration := &naro.RepairConfiguration{
 				Name:                    "default",
